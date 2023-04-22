@@ -26,10 +26,8 @@ GOOD_URL_SOURCES = [
 ]
 BAD_SHA256_SOURCES = [
     {
-        "url": "https://raw.githubusercontent.com/Neo23x0/signature-base/master/iocs/hash-iocs.txt",
-        "structure": "csv",
-        "delimiter": ";",
-        "value_column": 0
+        "url": "https://raw.githubusercontent.com/ayman-m/rosetta/main/data/bad-sha256.txt",
+        "structure": "lines"
     }
 ]
 GOOD_SHA256_SOURCES = [
