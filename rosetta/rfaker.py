@@ -69,17 +69,13 @@ class Observables:
             results = [line.strip() for line in response.text.strip().split("\n") if not line.startswith("#")]
         elif source['structure'] == 'csv':
             rows = csv.reader(filter(lambda line: not line.startswith('#'), response.text.strip().split('\n')),
-                              delimiter=';')
-            print (csv.reader(response.text.strip().split('\n'), delimiter=';').line_num)
+                              delimiter=source['delimiter'])
             for row in rows:
-
                 results.append(row[source['value_column']])
-
         elif source['structure'] == 'json':
             results = reduce(lambda d, key: d[key] if key != source['value_key'].split('.')[-1] else [i[key]
                                                                                                       for i in d],
                              source['value_key'].split('.'), response.json())
-
         random.shuffle(results)
 
         if source_type == 'subnet':
@@ -171,14 +167,20 @@ class Observables:
                 for i in range(count):
                     random_string = faker.text(max_nb_chars=50)
                     gen_observables.append(hashlib.sha256(random_string.encode()).hexdigest())
+
         if observable_type == ObservableType.SHA256 and known == ObservableKnown.GOOD:
             for source in GOOD_SHA256_SOURCES:
                 try:
                     gen_observables = cls._get_observables_from_source(source)[:count]
                     break
                 except Exception as e:
-                    print(f"Failed to connect to source: {source['url']} with error: {e}")
+                    warnings.warn(f"Failed to connect to source: {source['url']} with error: {e}.")
                     continue
+            if not gen_observables:
+                warnings.warn(f"No source of a good hash , generating a random hash.")
+                for i in range(count):
+                    random_string = faker.text(max_nb_chars=50)
+                    gen_observables.append(hashlib.sha256(random_string.encode()).hexdigest())
 
         if observable_type == ObservableType.CVE:
             for source in CVE_SOURCES:

@@ -31,10 +31,7 @@ BAD_SHA256_SOURCES = [
     }
 ]
 GOOD_SHA256_SOURCES = [
-    {
-        "url": "http://cinsscore.com/list/ci-badguys.txt",
-        "structure": "lines"
-    }
+
 ]
 CVE_SOURCES = [
     {
