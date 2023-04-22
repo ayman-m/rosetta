@@ -1,0 +1,5 @@
+requests~=2.28.2
+beautifulsoup4~=4.12.2
+Faker~=18.4.0
+setuptools==67.6.1
+urllib3~=1.26.15
