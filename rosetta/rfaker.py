@@ -188,8 +188,13 @@ class Observables:
                     gen_observables = cls._get_observables_from_source(source)[:count]
                     break
                 except Exception as e:
-                    print(f"Failed to connect to source: {source['url']} with error: {e}")
+                    warnings.warn(f"Failed to connect to source: {source['url']} with error: {e}.")
                     continue
+            if not gen_observables:
+                warnings.warn(f"No source of a cve , generating a random cve.")
+                for i in range(count):
+                    fake_cve = "CVE-" + faker.numerify(text="####-####")
+                    gen_observables.append(fake_cve)
 
         if observable_type == ObservableType.TERMS:
             for source in TERMS_SOURCES:

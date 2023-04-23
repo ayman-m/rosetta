@@ -35,15 +35,17 @@ GOOD_SHA256_SOURCES = [
 ]
 CVE_SOURCES = [
     {
-        "url": "https://services.nvd.nist.gov/rest/json/cves/1.0",
-        "structure": "json",
-        "value_key": "result.CVE_Items.cve.CVE_data_meta.ID",
-        "additional_keys": "result.CVE_Items.cve.description.description_data.value"
+        "url": "https://raw.githubusercontent.com/ayman-m/rosetta/main/data/cve.csv",
+        "structure": "csv",
+        "delimiter": ",",
+        "value_column": 0,
+        "description": 1
     }
 ]
 TERMS_SOURCES = [
     {
-        "url": "http://cinsscore.com/list/ci-badguys.txt",
-        "structure": "lines"
+        "url": "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json",
+        "structure": "json",
+        "value_key": "prefixes.ip_prefix"
     }
 ]
