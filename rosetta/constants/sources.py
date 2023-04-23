@@ -44,8 +44,9 @@ CVE_SOURCES = [
 ]
 TERMS_SOURCES = [
     {
-        "url": "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json",
-        "structure": "json",
-        "value_key": "prefixes.ip_prefix"
+        "url": "https://raw.githubusercontent.com/ayman-m/rosetta/main/data/techniques.csv",
+        "structure": "csv",
+        "value_column": 0,
+        "delimiter": ","
     }
 ]

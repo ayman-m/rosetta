@@ -114,7 +114,6 @@ class Observables:
                 warnings.warn(f"No source of a bad ip , generating a random IP.")
                 for i in range(count):
                     gen_observables.append(faker.ipv4())
-
         if observable_type == ObservableType.IP and known == ObservableKnown.GOOD:
             for source in GOOD_IP_SOURCES:
                 try:
@@ -127,7 +126,6 @@ class Observables:
                 warnings.warn(f"No source of a good ip , generating a random IP.")
                 for i in range(count):
                     gen_observables.append(faker.ipv4())
-
         if observable_type == ObservableType.URL and known == ObservableKnown.BAD:
             for source in BAD_URL_SOURCES:
                 try:
@@ -140,7 +138,6 @@ class Observables:
                 warnings.warn(f"No source of a bad url , generating a random url.")
                 for i in range(count):
                     gen_observables.append(faker.url())
-
         if observable_type == ObservableType.URL and known == ObservableKnown.GOOD:
             for source in GOOD_URL_SOURCES:
                 try:
@@ -153,7 +150,6 @@ class Observables:
                 warnings.warn(f"No source of a good url , generating a random url.")
                 for i in range(count):
                     gen_observables.append(faker.url())
-
         if observable_type == ObservableType.SHA256 and known == ObservableKnown.BAD:
             for source in BAD_SHA256_SOURCES:
                 try:
@@ -167,7 +163,6 @@ class Observables:
                 for i in range(count):
                     random_string = faker.text(max_nb_chars=50)
                     gen_observables.append(hashlib.sha256(random_string.encode()).hexdigest())
-
         if observable_type == ObservableType.SHA256 and known == ObservableKnown.GOOD:
             for source in GOOD_SHA256_SOURCES:
                 try:
@@ -181,7 +176,6 @@ class Observables:
                 for i in range(count):
                     random_string = faker.text(max_nb_chars=50)
                     gen_observables.append(hashlib.sha256(random_string.encode()).hexdigest())
-
         if observable_type == ObservableType.CVE:
             for source in CVE_SOURCES:
                 try:
@@ -195,15 +189,18 @@ class Observables:
                 for i in range(count):
                     fake_cve = "CVE-" + faker.numerify(text="####-####")
                     gen_observables.append(fake_cve)
-
         if observable_type == ObservableType.TERMS:
             for source in TERMS_SOURCES:
                 try:
                     gen_observables = cls._get_observables_from_source(source)[:count]
                     break
                 except Exception as e:
-                    print(f"Failed to connect to source: {source['url']} with error: {e}")
+                    warnings.warn(f"Failed to connect to source: {source['url']} with error: {e}.")
                     continue
+            if not gen_observables:
+                warnings.warn(f"No source of terms , generating random terms.")
+                for i in range(count):
+                    gen_observables.append(faker.sentence(nb_words=5))
 
         return gen_observables
 

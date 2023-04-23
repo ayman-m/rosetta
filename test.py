@@ -7,6 +7,7 @@ from rosetta import RConverter, RConverterToEnum, RConverterFromEnum, RFaker, Ob
 #test = Observables.generator(count=2, observable_type=ObservableType.URL, known=ObservableKnown.GOOD)
 #test = Observables.generator(count=2, observable_type=ObservableType.SHA256, known=ObservableKnown.BAD)
 #test = Observables.generator(count=2, observable_type=ObservableType.SHA256, known=ObservableKnown.GOOD)
-test = Observables.generator(count=2, observable_type=ObservableType.CVE)
+#test = Observables.generator(count=2, observable_type=ObservableType.CVE)
+test = Observables.generator(count=2, observable_type=ObservableType.TERMS)
 
 print (test)
