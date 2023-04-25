@@ -30,8 +30,8 @@ class RConverter:
         Example:
             >>> data = "CEF:0|Security|threatmanager|1.0|100|detected an attack|10|src=192.168.1.1 dst=192.168.1.2"
             >>> RConverter.converter(from_type=RConverterFromEnum.CEF, to_type=RConverterToEnum.JSON, data=data)
-            '{"message": "converted", "data": {"version": "0", "device_vendor": "Security", "device_product": "threatmanager", "device_version": "1.0",
-            "device_event_class_id": "100", "name": "detected an attack",
+            '{"message": "converted", "data": {"version": "0", "device_vendor": "Security", "device_product":
+            "threatmanager", "device_version": "1.0", "device_event_class_id": "100", "name": "detected an attack",
             "extensions": {"src": "192.168.1.1", "dst": "192.168.1.2"}}}'
         """
         converted_data = None

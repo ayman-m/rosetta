@@ -7,12 +7,11 @@ import csv
 import hashlib
 from enum import Enum
 from functools import reduce
-from bs4 import BeautifulSoup
 from faker import Faker
 from typing import Optional, List
-from rosetta.constants.sources import BAD_IP_SOURCES, GOOD_IP_SOURCES, BAD_URL_SOURCES, GOOD_URL_SOURCES, BAD_SHA256_SOURCES, \
-    GOOD_SHA256_SOURCES, CVE_SOURCES, TERMS_SOURCES
-from rosetta.constants.systems import UNIX_CMD, WINDOWS_CMD, WIN_PROCESSES, WIN_EVENTS
+from rosetta.constants.sources import BAD_IP_SOURCES, GOOD_IP_SOURCES, BAD_URL_SOURCES, GOOD_URL_SOURCES, \
+    BAD_SHA256_SOURCES, GOOD_SHA256_SOURCES, CVE_SOURCES, TERMS_SOURCES
+from rosetta.constants.systems import UNIX_CMD, WINDOWS_CMD, WIN_PROCESSES, WIN_EVENTS, INCIDENTS_TYPES
 from rosetta.constants.sensors import ACTIONS, PROTOCOLS, TECHNIQUES, ERROR_CODE
 
 
@@ -30,11 +29,15 @@ class ObservableKnown(Enum):
 
 
 class Observables:
-    def __init__(self, src_ip: list = [], dst_ip: list = [], src_host: list = [], dst_host: list = [],
-                 url: list = [], port: list = [], protocol: list = [], app: list = [], os: list = [], user: list = [],
-                 cve: list = [], file_name: list = [], file_hash: list = [], cmd: list = [], process: list = [],
-                 technique: list = [], entry_type: list = [], severity: list = [], sensor: list = [],
-                 action: list = [], event_id: list = [], error_code: list = [], terms: list = []):
+    def __init__(self, src_ip: list = None, dst_ip: Optional[list] = None, src_host: Optional[list] = None,
+                 dst_host: Optional[list] = None, url: Optional[list] = None, port: Optional[list] = None,
+                 protocol: Optional[list] = None, app: Optional[list] = None, os: Optional[list] = None,
+                 user: Optional[list] = None, cve: Optional[list] = None, file_name: Optional[list] = None,
+                 file_hash: Optional[list] = None, cmd: Optional[list] = None, process: Optional[list] = None,
+                 technique: Optional[list] = None, entry_type: Optional[list] = None, severity: Optional[list] = None,
+                 sensor: Optional[list] = None, action: Optional[list] = None, event_id: Optional[list] = None,
+                 error_code: Optional[list] = None, terms: Optional[list] = None, incident_types: Optional[list] = None,
+                 analysts: Optional[list] = None):
         self.src_ip = src_ip
         self.dst_ip = dst_ip
         self.src_host = src_host
@@ -58,13 +61,29 @@ class Observables:
         self.event_id = event_id
         self.error_code = error_code
         self.terms = terms
+        self.incident_types = incident_types
+        self.analysts = analysts
 
     @staticmethod
     def _get_observables_from_source(source: dict) -> list:
+        """
+        Fetches observables from a given source and returns them as a list.
+
+        Args:
+        - source: A dictionary containing information about the source, including its type, URL, structure, and value
+                  column or key.
+
+        Returns:
+        - A list of observables fetched from the source.
+
+        Raises:
+        - Exception: If the HTTP status code of the response is not 200 OK.
+        """
         results = []
         source_type = source.get('type')
         response = requests.get(source['url'])
-
+        if response.status_code != 200:
+            raise Exception(f"Failed to get data from {source['url']}, status code {response.status_code}")
         if source['structure'] == 'lines':
             results = [line.strip() for line in response.text.strip().split("\n") if not line.startswith("#")]
         elif source['structure'] == 'csv':
@@ -77,7 +96,6 @@ class Observables:
                                                                                                       for i in d],
                              source['value_key'].split('.'), response.json())
         random.shuffle(results)
-
         if source_type == 'subnet':
             ip_addresses = []
             for subnet in results:
@@ -86,7 +104,6 @@ class Observables:
                 if len(ip_addresses) > 1000:
                     break
             return ip_addresses
-
         return results
 
     @staticmethod
@@ -100,6 +117,23 @@ class Observables:
     @classmethod
     def generator(cls, count: int, observable_type: ObservableType,
                   known: ObservableKnown = ObservableKnown.BAD) -> List[str]:
+        """
+        Generates a list of observable values based on the given observable type and known status, with a desired count.
+        The function attempts to obtain the values from sources defined in configuration files. If the function fails to
+        retrieve values from any configured source, it generates fake values using Faker library.
+
+        Args:
+        - count: The number of observables to generate.
+        - observable_type: The type of observable to generate (e.g., IP, URL, SHA256, CVE, Terms).
+        - known: The known status of the observable (e.g., BAD, GOOD).
+
+        Returns:
+        - A list of generated observables.
+
+        Raises:
+        - Exception: If the function fails to retrieve data from any configured source with a HTTP status code other
+            than 200.
+        """
         faker = cls._create_faker()
         gen_observables = []
         if observable_type == ObservableType.IP and known == ObservableKnown.BAD:
@@ -144,7 +178,7 @@ class Observables:
                     gen_observables = cls._get_observables_from_source(source)[:count]
                     break
                 except Exception as e:
-                    print(f"Failed to connect to source: {source['url']} with error: {e}")
+                    warnings.warn(f"Failed to connect to source: {source['url']} with error: {e}.")
                     continue
             if not gen_observables:
                 warnings.warn(f"No source of a good url , generating a random url.")
@@ -201,11 +235,10 @@ class Observables:
                 warnings.warn(f"No source of terms , generating random terms.")
                 for i in range(count):
                     gen_observables.append(faker.sentence(nb_words=5))
-
         return gen_observables
 
 
-class RFaker:
+class Events:
 
     @staticmethod
     def _create_faker():
@@ -236,7 +269,7 @@ class RFaker:
             A list of syslog messages.
 
         Examples:
-            >>> RFaker.syslog(5)
+            >>> Events.syslog(5)
             ['Jan 01 05:32:48 myhostname sudo[1023]: username : COMMAND ; cat /etc/shadow',
              'Feb 03 10:17:59 myhostname sudo[2019]: username : COMMAND ; find / -name \'*.log\' -exec rm -f {} \\;',
              'Mar 12 22:46:16 myhostname sudo[3132]: username : COMMAND ; dd if=/dev/zero of=/dev/sda',
@@ -258,7 +291,7 @@ class RFaker:
             process = random.choice(observables.process) if observables and observables.process \
                 else "sudo"
             command = random.choice(observables.cmd) if observables and observables.cmd \
-                else faker.random.choice(UNIX_CMD)
+                else random.choice(UNIX_CMD)
             syslog_messages.append(f"{timestamp.strftime('%b %d %H:%M:%S')} {host} {process}[{pid}]: {user}"
                                    f" : {action} ; {command}")
         return syslog_messages
@@ -278,7 +311,7 @@ class RFaker:
             None.
 
         Example Usage:
-            >>> RFaker.cef(3)
+            >>> Events.cef(3)
             ['CEF:0|Acme|Firewall|1.0.0|ddab6607-1c35-4e81-a54a-99b1c9b77e49|Firewall ALLOW UDP traffic
             from example.com:61434 to 23.216.45.109:47983|1|src=example.com spt=61434 dst=23.216.45.109
             dpt=47983 proto=UDP act=ALLOW',
@@ -306,7 +339,7 @@ class RFaker:
                 else faker.random_int(min=1024, max=65535)
             protocol = random.choice(observables.protocol) if observables and observables.protocol \
                 else random.choice(PROTOCOLS)
-            action = random.choice(observables.action) if observables and observables.action  \
+            action = random.choice(observables.action) if observables and observables.action \
                 else random.choice(ACTIONS)
             event_id = random.choice(observables.event_id) if observables and observables.event_id \
                 else faker.random_int(min=1, max=10)
@@ -331,7 +364,7 @@ class RFaker:
         Example:
             To generate 10 fake LEEF messages:
             ```
-            >>> messages = RFaker.leef(count=2)
+            >>> messages = Events.leef(count=2)
             >>> print(messages)
             ['LEEF:1.0|Leef|Payment Portal|1.0|192.168.0.1|mycomputer|08:00:27:da:2e:2e|08:00:27:da:2e:2f|src=10.0.0.1
              dst=mycomputer spt=60918 dpt=443 request=https://example.com/?q=<script>alert("xss")</script>
@@ -375,7 +408,7 @@ class RFaker:
         return leef_messages
 
     @classmethod
-    def winevent(cls, count, observables: Optional[Observables]) -> List[str]:
+    def winevent(cls, count, observables: Optional[Observables] = None) -> List[str]:
         """
         Generates fake Windows Event Log messages.
 
@@ -387,7 +420,7 @@ class RFaker:
             list: A list of fake Windows Event Log messages.
 
         Examples:
-            >>> RFaker.winevent(1)
+            >>> Events.winevent(1)
             ['<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">...</Event>', ...]
         """
         winevent_messages = []
@@ -404,7 +437,7 @@ class RFaker:
             target_pid = faker.random_int()
             domain_name = faker.domain_name()
             subject_login_id = faker.random_int()
-            user_id = "S-1-"+str(faker.random_int())
+            user_id = "S-1-" + str(faker.random_int())
             destination_login_id = faker.random_int()
             privilege_list = faker.sentence(nb_words=5)
             event_record_id = random.choice(observables.event_id) if observables and observables.event_id \
@@ -414,29 +447,28 @@ class RFaker:
             host = random.choice(observables.src_host) if observables and observables.src_host \
                 else faker.hostname()
             user_name = random.choice(observables.user) if observables and observables.src_host \
-                else faker.hostname()
+                else faker.user_name()
             cmd = random.choice(observables.cmd) if observables and observables.cmd \
-                else faker.random.choice(WINDOWS_CMD)
+                else random.choice(WINDOWS_CMD)
             source_network_address = random.choice(observables.src_ip) if observables and observables.src_ip \
-                else faker.private_ipv4_address()
+                else faker.ipv4_private()
             file_name = random.choice(observables.file_name) if observables and observables.file_name \
                 else faker.file_name()
-
-            log_message_technique = random.choice(list(WIN_EVENTS.keys()))
-            log_message = WIN_EVENTS[log_message_technique]['log']
-            win_event = log_message.format(guid=guid, system_time=system_time, event_record_id=event_record_id,
-                                           process_id=process_id, process_name=process_name,
-                                           new_process_id=new_process_id, thread_id=thread_id, target_pid=target_pid,
-                                           host=host, user_id=user_id, user_name=user_name, domain_name=domain_name,
-                                           subject_login_id=subject_login_id, privilege_list=privilege_list,
-                                           cmd=cmd, destination_login_id=destination_login_id,
-                                           source_network_address=source_network_address, source_port=src_port,
-                                           transmitted_services=transmitted_services, file_name=file_name)
+            unformatted_event = random.choice(WIN_EVENTS)
+            win_event = unformatted_event.format(guid=guid, system_time=system_time, event_record_id=event_record_id,
+                                                 process_id=process_id, process_name=process_name,
+                                                 new_process_id=new_process_id, thread_id=thread_id,
+                                                 target_pid=target_pid, host=host, user_id=user_id, user_name=user_name,
+                                                 domain_name=domain_name, subject_login_id=subject_login_id,
+                                                 privilege_list=privilege_list, cmd=cmd,
+                                                 destination_login_id=destination_login_id,
+                                                 source_network_address=source_network_address, source_port=src_port,
+                                                 transmitted_services=transmitted_services, file_name=file_name)
             winevent_messages.append(win_event)
         return winevent_messages
 
     @classmethod
-    def json(cls, count, observables: Optional[Observables] = None):
+    def json(cls, count, observables: Optional[Observables] = None) -> List[dict]:
         """
         Generate fake JSON messages representing discovered vulnerabilities.
 
@@ -454,58 +486,31 @@ class RFaker:
             True
 
         """
-        cve_list = [
-            {'id': 'CVE-2022-38112', 'service': 'Azure RTOS ThreadX', 'version': '3.0',
-             'description': 'The Azure RTOS ThreadX implementation does not properly restrict access to certain memory'
-                            ' regions during processing of certain network packets.'},
-            {'id': 'CVE-2022-38647', 'service': 'Logitech Options software', 'version': '9.50',
-             'description': 'The Logitech Options software prior to 9.60.20 for Windows and macOS did not validate'
-                            ' server certificates properly when checking for software updates.'},
-            {'id': 'CVE-2022-38709', 'service': 'DirectX Graphics', 'version': '12.0',
-             'description': 'A use after free vulnerability exists in the D3D12 runtime library of the DirectX Graphics'
-                            ' component. An attacker who successfully exploited the vulnerability could run arbitrary '
-                            'code in kernel mode.'},
-            {'id': 'CVE-2022-38506', 'service': 'Apache HTTP Server', 'version': '2.4',
-             'description': 'An information disclosure vulnerability exists in the Apache HTTP Server due to'
-                            ' an off-by-one error.'},
-            {'id': 'CVE-2022-38754', 'service': 'BMC Remedy ITSM', 'version': '9.1',
-             'description': 'An improper neutralization of special elements in output used by a downstream'
-                            ' component (\'Injection\') vulnerability exists in BMC Remedy IT '
-                            'Service Management Suite.'},
-            {'id': 'CVE-2022-12345', 'service': 'MySQL Database Server', 'version': '8.0',
-             'description': 'An unprivileged user with access to the local system can gain unauthorized access '
-                            'to MySQL Server datasets.'},
-            {'id': 'CVE-2022-23456', 'service': 'Cisco IOS XR Software', 'version': '7.1',
-             'description': 'An attacker could exploit this vulnerability by sending a crafted TCP packet to an '
-                            'affected device on a TCP port that is listening.'},
-            {'id': 'CVE-2022-34567', 'service': 'Git', 'version': '2.30',
-             'description': 'An arbitrary code execution vulnerability exists in Git when a user configures a large '
-                            'number of glob patterns starting with a character class.'},
-            {'id': 'CVE-2022-45678', 'service': 'Docker Engine', 'version': '20.10',
-             'description': 'An attacker with write access to a bind-mounted directory inside the container can '
-                            'overwrite arbitrary files on the host filesystem.'},
-            {'id': 'CVE-2022-56789', 'service': 'Microsoft Exchange Server', 'version': '2019',
-             'description': 'An attacker could exploit this vulnerability by sending a specially crafted email message'
-                            ' to a vulnerable Exchange Server.'},
-        ]
         json_messages = []
         faker = cls._create_faker()
         for i in range(count):
-            event = {'event_type': 'vulnerability_discovered',
-                     'timestamp': faker.date_time_this_month().timestamp(),
-                     'severity': faker.random_int(min=1, max=10)}
-            random_cve = random.choice(cve_list)
-            host = host if host else faker.hostname()
-            event['cve_id'] = random_cve['id']
-            event['cve_description'] = random_cve['description']
-            event['service'] = random_cve['service']
-            event['service_version'] = random_cve['version']
-            event['host'] = host
+            system_time = faker.date_time_this_year().isoformat()
+            cve_id = random.choice(observables.cve) if observables and observables.cve \
+                else Observables.generator(observable_type=ObservableType.CVE, count=1)
+            host = random.choice(observables.src_host) if observables and observables.src_host \
+                else faker.hostname()
+            severity = random.choice(observables.severity) if observables and observables.severity \
+                else faker.random_int(min=1, max=5)
+            file_hash = random.choice(observables.file_hash) if observables and observables.file_hash \
+                else Observables.generator(observable_type=ObservableType.SHA256, known=ObservableKnown.BAD, count=1)
+            event = {
+                'event_type': 'vulnerability_discovered',
+                'timestamp': system_time,
+                'severity': severity,
+                'host': host,
+                'file_hash': file_hash,
+                'cve': cve_id
+            }
             json_messages.append(event)
         return json_messages
 
     @classmethod
-    def incidents(cls, count, fields, host):
+    def incidents(cls, count, fields: Optional[str] = None, observables: Optional[Observables] = None) -> List[dict]:
         """
         Generates a list of fake incident data.
 
@@ -514,7 +519,7 @@ class RFaker:
             fields (str, optional): A comma-separated list of incident fields to include in the output. If None,
                 all fields will be included. Valid options are: 'id', 'duration', 'type', 'analyst', 'severity',
                 'description', 'events'.
-            host (str): The hostname to associate with each generated event.
+            observables: An observables object. If not provided, random objservable will be generated and used.
 
         Returns:
             List[Dict]: A list of incident dictionaries. Each dictionary contains the following fields:
@@ -529,7 +534,7 @@ class RFaker:
                 - 'events' (List[Dict], optional): A list of event dictionaries associated with the incident.
 
         Example:
-            >>> incidents(count=3, fields='id,type,severity', host='example.com')
+            >>> incidents(count=3, fields='id,type,severity')
             [
                 {'id': 1, 'type': 'Lateral Movement', 'severity': 'Critical'},
                 {'id': 2, 'type': 'Access Violation', 'severity': 'High'},
@@ -537,32 +542,35 @@ class RFaker:
             ]
         """
         incidents = []
-        faker = Faker()
-        mitre_terms = cls._get_mitre_terms()
-        incident_types = ['Malware', 'Phishing', 'Access Violation', 'Lateral Movement', 'Port Scan',
-                          'Sql Injection', 'Brute Force', 'Control Avoidance', 'Rogue Device', 'Denial Of Service',
-                          'Account Compromised']
-        severities = ['High', 'Unknown', 'Low', 'Medium', 'High', 'Critical']
-        analysts = [faker.unique.first_name() in range(15)]
+        faker = cls._create_faker()
+
         incident_ids = set()
 
-        random.shuffle(incident_types)
+        incident_types = observables.incident_types if observables and observables.incident_types \
+            else INCIDENTS_TYPES
+        analysts = observables.analysts if observables and observables.analysts \
+            else [faker.unique.first_name() for _ in range(10)]
         analyst_incident_map = {}
 
         for analyst in analysts:
             mapped_incident_type = incident_types.pop(0)
             analyst_incident_map[analyst] = mapped_incident_type
             incident_types.append(mapped_incident_type)
+
         for i in range(count):
             incident = {}
+            duration = random.randint(1, 5)
             while True:
                 incident_id = random.randint(1, count)
                 if incident_id not in incident_ids:
                     incident_ids.add(incident_id)
                     break
             incident_type = random.choice(incident_types)
-            duration = random.randint(1, 5)
             analyst = random.choice(analysts)
+            severity = random.choice(observables.severity) if observables and observables.severity \
+                else faker.random_int(min=1, max=5)
+            description = random.choice(observables.terms) if observables and observables.terms \
+                else Observables.generator(observable_type=ObservableType.TERMS, known=ObservableKnown.BAD, count=1000)
             if analyst in analyst_incident_map and random.randint(1, 100) == 2:
                 incident_type = analyst_incident_map[analyst]
                 duration = random.randint(1, 2)
@@ -577,18 +585,17 @@ class RFaker:
                 if 'analyst' in field_list:
                     incident['analyst'] = analyst
                 if 'severity' in field_list:
-                    severity = random.choice(severities)
                     incident['severity'] = severity
                 if 'description' in field_list:
-                    incident_description = faker.paragraph(nb_sentences=1, ext_word_list=mitre_terms)
+                    incident_description = faker.paragraph(nb_sentences=1, ext_word_list=description)
                     incident['description'] = incident_description
                 if 'events' in field_list:
                     incident['events'] = [
-                        {"event": cls.syslog(count=1, host=host)[0]},
-                        {"event": cls.cef(count=1, host=host)[0]},
-                        {"event": cls.leef(count=1, host=host)[0]},
-                        {"event": cls.winevent(count=1, host=host)[0]},
-                        {"event": cls.json(count=1, host=host)[0]}
+                        {"event": cls.syslog(count=1, observables=observables)[0]},
+                        {"event": cls.cef(count=1, observables=observables)[0]},
+                        {"event": cls.leef(count=1, observables=observables)[0]},
+                        {"event": cls.winevent(count=1, observables=observables)[0]},
+                        {"event": cls.json(count=1, observables=observables)[0]}
                     ]
             else:
                 incident = {

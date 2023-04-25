@@ -5,10 +5,10 @@ import socket
 import requests
 import warnings
 from enum import Enum
-
+from typing import Optional
 from urllib3.exceptions import InsecureRequestWarning
 
-from rosetta.rfaker import RFaker
+from rosetta.rfaker import Observables, Events
 
 
 class WorkerTypeEnum(Enum):
@@ -30,7 +30,7 @@ class RSender:
         count (int): Number of messages to send.
         interval (int): Time interval (in seconds) between each message sent.
         destination (str): Destination address in the format <protocol>://<ip_address>:<port>.
-        host (str): Host name or IP address to use for fake data.
+        observables (Observables): Host name or IP address to use for fake data.
         fields (str): Comma-separated list of incident fields to include in the fake data.
 
     Attributes:
@@ -42,7 +42,7 @@ class RSender:
         destination (str): Destination address in the format <protocol>://<ip_address>:<port>.
         created_at (datetime): Timestamp of when the worker was created.
         status (str): Status of the worker (Running, Stopped, Connection Error).
-        host (str): Host name or IP address to use for fake data.
+        observables (list): Host name or IP address to use for fake data.
         fields (str): Comma-separated list of incident fields to include in the fake data.
 
     Methods:
@@ -66,9 +66,9 @@ class RSender:
     """
 
     def __init__(self, data_type: WorkerTypeEnum, destination: str,
-                 worker_name: str = 'worker_'+str(datetime.datetime.now()),
-                 count: int = 1, interval: int = 1, host: str = None,
-                 fields: str = None, verify_ssl: bool = None):
+                 worker_name: Optional[str] = 'worker_'+str(datetime.datetime.now()), count: Optional[int] = 1,
+                 interval: Optional[int] = 1, observables: Optional[Observables] = None, fields: Optional[str] = None,
+                 verify_ssl: Optional[bool] = None):
         """
         Constructor for DataSenderWorker class.
 
@@ -83,7 +83,7 @@ class RSender:
         :param worker_name: str, name of the worker.
         :param count: int, number of times to send the data.
         :param interval: int, time interval between two consecutive data sends.
-        :param host: str, hostname for the generated fake data.
+        :param observables: Observables, list of observables.
         :param fields: str, comma-separated list of fields to include in incident data.
         :param verify_ssl: bool, handling ssl verification errors.
 
@@ -97,7 +97,7 @@ class RSender:
         self.destination = destination
         self.created_at = datetime.datetime.now()
         self.status = "Stopped"
-        self.host = host
+        self.observables = observables
         self.fields = fields
         self.verify_ssl = verify_ssl
 
@@ -111,6 +111,7 @@ class RSender:
         if self.status == "Stopped":
             self.thread = threading.Thread(target=self.send_data, args=())
             self.status = "Running"
+            print(f"Starting worker: {self.worker_name}")
             self.thread.start()
         return self.status
 
@@ -139,11 +140,11 @@ class RSender:
                 self.count -= 1
                 if self.data_type in [WorkerTypeEnum.SYSLOG, WorkerTypeEnum.CEF, WorkerTypeEnum.LEEF]:
                     if self.data_type == WorkerTypeEnum.SYSLOG:
-                        fake_message = RFaker.syslog_messages(count=1, host=self.host)
+                        fake_message = Events.syslog(count=1, observables=self.observables)
                     if self.data_type == WorkerTypeEnum.CEF:
-                        fake_message = RFaker.cef_messages(count=1, host=self.host)
+                        fake_message = Events.cef(count=1, observables=self.observables)
                     if self.data_type == WorkerTypeEnum.LEEF:
-                        fake_message = RFaker.leef_messages(count=1, host=self.host)
+                        fake_message = Events.leef(count=1, observables=self.observables)
                     ip_address = self.destination.split(':')[1]
                     port = self.destination.split(':')[2]
                     if 'tcp' in self.destination:
@@ -158,10 +159,10 @@ class RSender:
                         sock.sendto(fake_message[0].encode(), (ip_address, int(port)))
                 elif self.data_type in [WorkerTypeEnum.JSON, WorkerTypeEnum.INCIDENT]:
                     if self.data_type == WorkerTypeEnum.JSON:
-                        fake_message = RFaker.json_messages(count=1, host=self.host)
+                        fake_message = Events.json(count=1, observables=self.observables)
                     if self.data_type == WorkerTypeEnum.INCIDENT:
                         fake_message = [{
-                            "alert": RFaker.incidents(count=1, host=self.host, fields=self.fields)
+                            "alert": Events.incidents(count=1, observables=self.observables, fields=self.fields)
                         }]
                     if '://' not in self.destination:
                         url = 'http://' + self.destination

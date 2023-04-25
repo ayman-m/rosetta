@@ -9,7 +9,7 @@ class TestRConverter(unittest.TestCase):
         expected_json = {
             'message': 'converted',
             'data': {
-                'version': 'cef_log=CEF:0',
+                'version': 'CEF:0',
                 'device_vendor': 'Security',
                 'device_product': 'Intrusion Detection System',
                 'device_version': '1.0',
