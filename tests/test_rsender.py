@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch
-from rosetta.rsender import RSender, WorkerTypeEnum
+from rosetta.rsender import Sender, WorkerTypeEnum
 from rosetta.rfaker import Observables
 
 src_ip, dst_ip, src_host, dst_host = ["192.168.10.10"], ["1.1.1.1"], ["abc"], ["xyz"]
@@ -23,7 +23,7 @@ observables_list = Observables(src_ip=src_ip, dst_ip=dst_ip, src_host=src_host, 
 class TestRSender(unittest.TestCase):
 
     def setUp(self):
-        self.worker = RSender(
+        self.worker = Sender(
             data_type=WorkerTypeEnum.SYSLOG,
             destination='tcp://127.0.0.1:514',
             count=1,

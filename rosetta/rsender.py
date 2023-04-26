@@ -20,7 +20,7 @@ class WorkerTypeEnum(Enum):
     INCIDENT = 'incident'
 
 
-class RSender:
+class Sender:
     """
     A class for sending fake data to a destination via a TCP or UDP socket or HTTP request.
 
@@ -151,11 +151,13 @@ class RSender:
                         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         sock.settimeout(5)
                         sock.connect((ip_address, int(port)))
+                        print(f"Worker: {self.worker_name} sending log message to {ip_address} ")
                         sock.sendall(fake_message[0].encode())
                         sock.close()
                     else:
                         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                         sock.settimeout(5)
+                        print(f"Worker: {self.worker_name} sending log message to {ip_address} ")
                         sock.sendto(fake_message[0].encode(), (ip_address, int(port)))
                 elif self.data_type in [WorkerTypeEnum.JSON, WorkerTypeEnum.INCIDENT]:
                     if self.data_type == WorkerTypeEnum.JSON:
@@ -169,6 +171,7 @@ class RSender:
                     else:
                         url = self.destination
                     warnings.filterwarnings("ignore", category=InsecureRequestWarning)
+                    print(f"Worker: {self.worker_name} sending log message to {url} ")
                     response = requests.post(url, json=fake_message[0], timeout=(2, 5), verify=self.verify_ssl)
                     response.raise_for_status()
             except (ConnectionRefusedError, socket.timeout, requests.exceptions.RequestException) as e:
