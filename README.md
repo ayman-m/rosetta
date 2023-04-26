@@ -2,8 +2,6 @@
 ![codeql](https://github.com/ayman-m/rosetta/actions/workflows/github-code-scanning/codeql/badge.svg)
 [![slack-community](https://img.shields.io/badge/Slack-4A154C?logo=slack&logoColor=white)](https://go-rosetta.slack.com)
 
-<img  align="left" src="img/rosetta-logo.svg" width="30%" alt="Rosetta"> 
-
 # Rosetta
 
 Rosetta is a Python package that can be used to fake security logs and alerts for testing different detection and response use cases. It provides the following functions:
