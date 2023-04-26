@@ -1,5 +1,5 @@
 [![snyk](https://snyk.io/test/github/my-soc/Rosetta/badge.svg)](https://snyk.io/test/github/my-soc/Rosetta)
-![codeql](https://github.com/my-soc/Rosetta/actions/workflows/github-code-scanning/codeql/badge.svg)
+![codeql](https://github.com/ayman-m/rosetta/actions/workflows/github-code-scanning/codeql/badge.svg)
 [![slack-community](https://img.shields.io/badge/Slack-4A154C?logo=slack&logoColor=white)](https://go-rosetta.slack.com)
 
 <img  align="left" src="img/rosetta-logo.svg" width="30%" alt="Rosetta"> 
