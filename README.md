@@ -14,7 +14,7 @@ Rosetta is a Python package that can be used to fake security logs and alerts fo
 
 - You can install rosetta via pip:
 ```sh
-pip install rosetta
+pip install rosetta-ce
 ```
 - Or you can install it from the source code:
 ```sh
@@ -24,8 +24,7 @@ python setup.py install
 ```
 - Once installed, you can import the library in your Python code like this:
 ```python
-import rosetta
-from rosetta.rfaker import Observables, Events
+from rosetta import Observables, Events
 ```
 
 ## Usage
