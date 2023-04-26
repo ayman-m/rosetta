@@ -5,10 +5,11 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="rosetta-ce",
-    version="0.1.0",
+    version="1.0.0",
     author="Ayman Mahmoud",
     author_email="content@ayman.online",
-    description="Rosetta is a Python package that can be used to fake security logs and alerts for testing different detection and response use cases.",
+    description="Rosetta is a Python package that can be used to fake security logs and alerts for testing different "
+                "detection and response use cases.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ayman-m/rosetta",
