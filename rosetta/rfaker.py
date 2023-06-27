@@ -8,6 +8,7 @@ import hashlib
 from enum import Enum
 from functools import reduce
 from faker import Faker
+from datetime import datetime, timedelta
 from typing import Optional, List
 from rosetta.constants.sources import BAD_IP_SOURCES, GOOD_IP_SOURCES, BAD_URL_SOURCES, GOOD_URL_SOURCES, \
     BAD_SHA256_SOURCES, GOOD_SHA256_SOURCES, CVE_SOURCES, TERMS_SOURCES
@@ -257,31 +258,34 @@ class Events:
         return Observables()
 
     @classmethod
-    def syslog(cls, count: int, observables: Optional[Observables] = None) -> List[str]:
+    def syslog(cls, count: int, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[str]:
         """
         Generate fake syslog messages.
 
         Args:
             count: The number of syslog messages to generate.
-            observables: An observables object. If not provided, random objservable will be generated and used.
-
+            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
+            the past hour from now will be used.
+            observables: Optional. An observables object. If not provided, random objservable will be generated and used.
         Returns:
             A list of syslog messages.
 
         Examples:
             >>> Events.syslog(5)
             ['Jan 01 05:32:48 myhostname sudo[1023]: username : COMMAND ; cat /etc/shadow',
-             'Feb 03 10:17:59 myhostname sudo[2019]: username : COMMAND ; find / -name \'*.log\' -exec rm -f {} \\;',
-             'Mar 12 22:46:16 myhostname sudo[3132]: username : COMMAND ; dd if=/dev/zero of=/dev/sda',
-             'Apr 07 02:08:08 myhostname sudo[4111]: username : COMMAND ; chmod -R 777 /',
-             'May 30 16:59:41 myhostname sudo[5195]: username : COMMAND ; chown -R nobody:nogroup /']
+             'Jan 01 05:17:59 myhostname sudo[2019]: username : COMMAND ; find / -name \'*.log\' -exec rm -f {} \\;',
+             'Jan 01 05:46:16 myhostname sudo[3132]: username : COMMAND ; dd if=/dev/zero of=/dev/sda',
+             'Jan 01 05:08:08 myhostname sudo[4111]: username : COMMAND ; chmod -R 777 /',
+             'Jan 01 05:59:41 myhostname sudo[5195]: username : COMMAND ; chown -R nobody:nogroup /']
 
         """
         syslog_messages = []
         faker = cls._create_faker()
-
+        if timestamp is None:
+            timestamp = datetime.now() - timedelta(hours=1)
+            timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
         for i in range(count):
-            timestamp = faker.date_time_this_year()
+            timestamp += timedelta(seconds=1)
             pid = faker.random_int(min=1000, max=65535)
             action = "COMMAND"
             host = random.choice(observables.src_host) if observables and observables.src_host \
@@ -297,12 +301,13 @@ class Events:
         return syslog_messages
 
     @classmethod
-    def cef(cls, count: int, observables: Optional[Observables] = None) -> List[str]:
+    def cef(cls, count: int, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[str]:
         """
         Generates fake CEF (Common Event Format) messages.
 
         Args:
             count: The number of CEF messages to generate.
+            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
             observables: An observables object. If not provided, random objservable will be generated and used.
         Returns:
             A list of fake CEF messages in string format.
@@ -325,7 +330,11 @@ class Events:
         cef_messages = []
         faker = cls._create_faker()
         version = faker.numerify("1.0.#")
+        if timestamp is None:
+            timestamp = datetime.now() - timedelta(hours=1)
+            timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
         for i in range(count):
+            timestamp += timedelta(seconds=1)
             uuid = faker.uuid4()
             vendor = faker.company()
             src_port = faker.random_int(min=1024, max=65535)
@@ -344,18 +353,19 @@ class Events:
             event_id = random.choice(observables.event_id) if observables and observables.event_id \
                 else faker.random_int(min=1, max=10)
             event_description = f"Firewall {action} {protocol} traffic from {host}:{src_port} to {dst_ip}:{dst_port}"
-            cef_messages.append(f"CEF:0|{vendor}|Firewall|{version}|{uuid}|{event_description}|"
-                                f"{event_id}|src={host} spt={src_port} dst={dst_ip} url={url} "
+            cef_messages.append(f"CEF:0|{vendor}|Firewall|{version}|{uuid}|{timestamp}|"
+                                f"{event_description}|{event_id}|src={host} spt={src_port} dst={dst_ip} url={url}"
                                 f"dpt={dst_port} proto={protocol} act={action}")
         return cef_messages
 
     @classmethod
-    def leef(cls, count, observables: Optional[Observables] = None) -> List[str]:
+    def leef(cls, count, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[str]:
         """
         Generates fake LEEF (Log Event Extended Format) messages.
 
         Parameters:
             count (int): The number of LEEF messages to generate.
+            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
             observables: An observables object. If not provided, random objservable will be generated and used.
 
         Returns:
@@ -378,8 +388,11 @@ class Events:
         """
         leef_messages = []
         faker = cls._create_faker()
-
+        if timestamp is None:
+            timestamp = datetime.now() - timedelta(hours=1)
+            timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
         for i in range(count):
+            timestamp += timedelta(seconds=1)
             src_port = faker.random_int(min=1024, max=65535)
             request_size = faker.random_int(min=100, max=10000)
             response_size = faker.random_int(min=100, max=10000)
@@ -397,8 +410,8 @@ class Events:
             error_code = random.choice(observables.error_code) if observables and observables.error_code \
                 else random.choice(ERROR_CODE)
 
-            leef_log = f"LEEF:1.0|Leef|Payment Portal|1.0|{faker.ipv4()}|{host}|{faker.mac_address()}|" \
-                       f"{faker.mac_address()}|"
+            leef_log = f"LEEF:1.0|Leef|Payment Portal|1.0|deviceEventDate={timestamp}|{faker.ipv4()}|{host}|" \
+                       f"{faker.mac_address()}|{faker.mac_address()}|"
             leef_log += f"src={src_ip} dst={host} spt={src_port} dpt=443 request={url} "
             leef_log += f"method={method} proto=HTTP/1.1 status={str(error_code)} hash={file_hash}"
             leef_log += f"request_size={request_size} " \
@@ -408,12 +421,13 @@ class Events:
         return leef_messages
 
     @classmethod
-    def winevent(cls, count, observables: Optional[Observables] = None) -> List[str]:
+    def winevent(cls, count, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[str]:
         """
         Generates fake Windows Event Log messages.
 
         Args:
             count (int): The number of fake messages to generate.
+            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
             observables: An observables object. If not provided, random objservable will be generated and used.
 
         Returns:
@@ -425,12 +439,15 @@ class Events:
         """
         winevent_messages = []
         faker = cls._create_faker()
-
+        if timestamp is None:
+            timestamp = datetime.now() - timedelta(hours=1)
+            timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
         for i in range(count):
+            timestamp += timedelta(seconds=1)
             guid = faker.uuid4()
             src_port = faker.random_int(min=1024, max=65535)
             transmitted_services = faker.sentence(nb_words=5)
-            system_time = faker.date_time_this_year().isoformat()
+            system_time = timestamp
             process_id = faker.random_int()
             new_process_id = faker.random_int()
             thread_id = faker.random_int()
@@ -468,12 +485,13 @@ class Events:
         return winevent_messages
 
     @classmethod
-    def json(cls, count, observables: Optional[Observables] = None) -> List[dict]:
+    def json(cls, count, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[dict]:
         """
         Generate fake JSON messages representing discovered vulnerabilities.
 
         Args:
             count (int): The number of JSON messages to generate.
+            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
             observables: An observables object. If not provided, random objservable will be generated and used.
         Returns:
             List[Dict[str, Union[str, int]]]: A list of dictionaries representing the generated JSON messages.
@@ -486,10 +504,14 @@ class Events:
             True
 
         """
+        if timestamp is None:
+            timestamp = datetime.now() - timedelta(hours=1)
+            timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
         json_messages = []
         faker = cls._create_faker()
         for i in range(count):
-            system_time = faker.date_time_this_year().isoformat()
+            timestamp += timedelta(seconds=1)
+            system_time = timestamp
             cve_id = random.choice(observables.cve) if observables and observables.cve \
                 else Observables.generator(observable_type=ObservableType.CVE, count=1)
             host = random.choice(observables.src_host) if observables and observables.src_host \
