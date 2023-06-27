@@ -511,7 +511,7 @@ class Events:
             timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
         for i in range(count):
             timestamp += timedelta(seconds=1)
-            system_time = timestamp
+            system_time = timestamp.strftime('%b %d %H:%M:%S')
             cve_id = random.choice(observables.cve) if observables and observables.cve \
                 else Observables.generator(observable_type=ObservableType.CVE, count=1)
             host = random.choice(observables.src_host) if observables and observables.src_host \
