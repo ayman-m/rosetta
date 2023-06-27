@@ -463,7 +463,7 @@ class Events:
                 else random.choice(WIN_PROCESSES)
             host = random.choice(observables.src_host) if observables and observables.src_host \
                 else faker.hostname()
-            user_name = random.choice(observables.user) if observables and observables.src_host \
+            user_name = random.choice(observables.user) if observables and observables.user \
                 else faker.user_name()
             cmd = random.choice(observables.cmd) if observables and observables.cmd \
                 else random.choice(WINDOWS_CMD)
