@@ -504,11 +504,11 @@ class Events:
             True
 
         """
+        json_messages = []
+        faker = cls._create_faker()
         if timestamp is None:
             timestamp = datetime.now() - timedelta(hours=1)
             timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
-        json_messages = []
-        faker = cls._create_faker()
         for i in range(count):
             timestamp += timedelta(seconds=1)
             system_time = timestamp
