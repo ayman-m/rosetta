@@ -296,7 +296,7 @@ class Events:
                 else "sudo"
             command = random.choice(observables.cmd) if observables and observables.cmd \
                 else random.choice(UNIX_CMD)
-            syslog_messages.append(f"{timestamp.strftime('%b %d %H:%M:%S')} {host} {process}[{pid}]: {user}"
+            syslog_messages.append(f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')} {host} {process}[{pid}]: {user}"
                                    f" : {action} ; {command}")
         return syslog_messages
 
@@ -511,7 +511,7 @@ class Events:
             timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
         for i in range(count):
             timestamp += timedelta(seconds=1)
-            system_time = timestamp.strftime('%b %d %H:%M:%S')
+            system_time = timestamp.strftime('%Y-%m-%d %H:%M:%S')
             cve_id = random.choice(observables.cve) if observables and observables.cve \
                 else Observables.generator(observable_type=ObservableType.CVE, count=1)
             host = random.choice(observables.src_host) if observables and observables.src_host \
