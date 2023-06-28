@@ -68,7 +68,7 @@ class Sender:
     def __init__(self, data_type: WorkerTypeEnum, destination: str,
                  worker_name: Optional[str] = 'worker_'+str(datetime.datetime.now()), count: Optional[int] = 1,
                  interval: Optional[int] = 1, observables: Optional[Observables] = None, fields: Optional[str] = None,
-                 verify_ssl: Optional[bool] = None):
+                 verify_ssl: Optional[bool] = None, datetime_obj: Optional[datetime] = None):
         """
         Constructor for DataSenderWorker class.
 
@@ -100,6 +100,7 @@ class Sender:
         self.observables = observables
         self.fields = fields
         self.verify_ssl = verify_ssl
+        self.datetime_obj = datetime_obj
 
     def start(self) -> str:
         """
@@ -140,11 +141,11 @@ class Sender:
                 self.count -= 1
                 if self.data_type in [WorkerTypeEnum.SYSLOG, WorkerTypeEnum.CEF, WorkerTypeEnum.LEEF]:
                     if self.data_type == WorkerTypeEnum.SYSLOG:
-                        fake_message = Events.syslog(count=1, observables=self.observables)
+                        fake_message = Events.syslog(count=1, timestamp=self.datetime_obj, observables=self.observables)
                     if self.data_type == WorkerTypeEnum.CEF:
-                        fake_message = Events.cef(count=1, observables=self.observables)
+                        fake_message = Events.cef(count=1, timestamp=self.datetime_obj, observables=self.observables)
                     if self.data_type == WorkerTypeEnum.LEEF:
-                        fake_message = Events.leef(count=1, observables=self.observables)
+                        fake_message = Events.leef(count=1, timestamp=self.datetime_obj, observables=self.observables)
                     ip_address = self.destination.split(':')[1]
                     port = self.destination.split(':')[2]
                     if 'tcp' in self.destination:
@@ -161,7 +162,7 @@ class Sender:
                         sock.sendto(fake_message[0].encode(), (ip_address, int(port)))
                 elif self.data_type in [WorkerTypeEnum.JSON, WorkerTypeEnum.INCIDENT]:
                     if self.data_type == WorkerTypeEnum.JSON:
-                        fake_message = Events.json(count=1, observables=self.observables)
+                        fake_message = Events.json(count=1, timestamp=self.datetime_obj, observables=self.observables)
                     if self.data_type == WorkerTypeEnum.INCIDENT:
                         fake_message = [{
                             "alert": Events.incidents(count=1, observables=self.observables, fields=self.fields)
