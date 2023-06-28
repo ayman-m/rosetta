@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import time
 import threading
 import socket
@@ -66,7 +66,7 @@ class Sender:
     """
 
     def __init__(self, data_type: WorkerTypeEnum, destination: str,
-                 worker_name: Optional[str] = 'worker_'+str(datetime.datetime.now()), count: Optional[int] = 1,
+                 worker_name: Optional[str] = 'worker_'+str(datetime.now()), count: Optional[int] = 1,
                  interval: Optional[int] = 1, observables: Optional[Observables] = None, fields: Optional[str] = None,
                  verify_ssl: Optional[bool] = None, datetime_obj: Optional[datetime] = None):
         """
@@ -95,7 +95,7 @@ class Sender:
         self.count = count
         self.interval = interval
         self.destination = destination
-        self.created_at = datetime.datetime.now()
+        self.created_at = datetime.now()
         self.status = "Stopped"
         self.observables = observables
         self.fields = fields
