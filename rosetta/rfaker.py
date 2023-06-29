@@ -546,6 +546,7 @@ class Events:
 
     @classmethod
     def incidents(cls, count, fields: Optional[str] = None, timestamp: Optional[datetime] = None,
+                  vendor: Optional[str] = None, product: Optional[str] = None, version: Optional[str] = None,
                   observables: Optional[Observables] = None) -> List[dict]:
         """
         Generates a list of fake incident data.
@@ -555,6 +556,9 @@ class Events:
             fields (str, optional): A comma-separated list of incident fields to include in the output. If None,
                 all fields will be included. Valid options are: 'id', 'duration', 'type', 'analyst', 'severity',
                 'description', 'events'.
+            vendor: Optional. The vendor.
+            product: Optional. The product.
+            version: Optional. The version.
             timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
             observables: An observables object. If not provided, random objservable will be generated and used.
 
@@ -628,8 +632,10 @@ class Events:
                 if 'events' in field_list:
                     incident['events'] = [
                         {"event": cls.syslog(count=1, timestamp=timestamp, observables=observables)[0]},
-                        {"event": cls.cef(count=1, timestamp=timestamp, observables=observables)[0]},
-                        {"event": cls.leef(count=1, timestamp=timestamp, observables=observables)[0]},
+                        {"event": cls.cef(count=1, timestamp=timestamp, vendor=vendor, product=product,
+                                          version=version, observables=observables)[0]},
+                        {"event": cls.leef(count=1, timestamp=timestamp, vendor=vendor, product=product,
+                                           version=version, observables=observables)[0]},
                         {"event": cls.winevent(count=1, timestamp=timestamp, observables=observables)[0]},
                         {"event": cls.json(count=1, timestamp=timestamp, observables=observables)[0]}
                     ]
