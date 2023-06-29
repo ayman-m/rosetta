@@ -57,7 +57,8 @@ class Sender:
 
     def __init__(self, data_type: str, destination: str,
                  worker_name: Optional[str] = 'worker_'+str(datetime.now()), count: Optional[int] = 1,
-                 interval: Optional[int] = 1, observables: Optional[Observables] = None, fields: Optional[str] = None,
+                 interval: Optional[int] = 1, vendor: Optional[str] = None, product: Optional[str] = None,
+                 version: Optional[str] = None, observables: Optional[Observables] = None, fields: Optional[str] = None,
                  verify_ssl: Optional[bool] = None, datetime_obj: Optional[datetime] = None):
         """
         Constructor for DataSenderWorker class.
@@ -73,6 +74,9 @@ class Sender:
         :param worker_name: str, name of the worker.
         :param count: int, number of times to send the data.
         :param interval: int, time interval between two consecutive data sends.
+        :param vendor: Optional. The vendor.
+        :param product: Optional. The product.
+        :param version: Optional. The version.
         :param observables: Observables, list of observables.
         :param fields: str, comma-separated list of fields to include in incident data.
         :param verify_ssl: bool, handling ssl verification errors.
@@ -84,6 +88,9 @@ class Sender:
         self.data_type = data_type
         self.count = count
         self.interval = interval
+        self.vendor = vendor
+        self.product = product
+        self.version = version
         self.destination = destination
         self.created_at = datetime.now()
         self.status = "Stopped"
@@ -133,9 +140,13 @@ class Sender:
                     if self.data_type == "SYSLOG":
                         fake_message = Events.syslog(count=1, timestamp=self.datetime_obj, observables=self.observables)
                     if self.data_type == "CEF":
-                        fake_message = Events.cef(count=1, timestamp=self.datetime_obj, observables=self.observables)
+                        fake_message = Events.cef(count=1, timestamp=self.datetime_obj, vendor=self.vendor,
+                                                  product=self.product, version=self.version,
+                                                  observables=self.observables)
                     if self.data_type == "LEEF":
-                        fake_message = Events.leef(count=1, timestamp=self.datetime_obj, observables=self.observables)
+                        fake_message = Events.leef(count=1, timestamp=self.datetime_obj, vendor=self.vendor,
+                                                   product=self.product, version=self.version,
+                                                   observables=self.observables)
                     ip_address = self.destination.split(':')[1]
                     port = self.destination.split(':')[2]
                     if 'tcp' in self.destination:
