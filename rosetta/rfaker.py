@@ -545,7 +545,8 @@ class Events:
         return json_messages
 
     @classmethod
-    def incidents(cls, count, fields: Optional[str] = None, observables: Optional[Observables] = None) -> List[dict]:
+    def incidents(cls, count, fields: Optional[str] = None, timestamp: Optional[datetime] = None,
+                  observables: Optional[Observables] = None) -> List[dict]:
         """
         Generates a list of fake incident data.
 
@@ -554,6 +555,7 @@ class Events:
             fields (str, optional): A comma-separated list of incident fields to include in the output. If None,
                 all fields will be included. Valid options are: 'id', 'duration', 'type', 'analyst', 'severity',
                 'description', 'events'.
+            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
             observables: An observables object. If not provided, random objservable will be generated and used.
 
         Returns:
@@ -586,7 +588,6 @@ class Events:
         analysts = observables.analysts if observables and observables.analysts \
             else [faker.unique.first_name() for _ in range(10)]
         analyst_incident_map = {}
-
         for analyst in analysts:
             mapped_incident_type = incident_types.pop(0)
             analyst_incident_map[analyst] = mapped_incident_type
@@ -626,11 +627,11 @@ class Events:
                     incident['description'] = incident_description
                 if 'events' in field_list:
                     incident['events'] = [
-                        {"event": cls.syslog(count=1, observables=observables)[0]},
-                        {"event": cls.cef(count=1, observables=observables)[0]},
-                        {"event": cls.leef(count=1, observables=observables)[0]},
-                        {"event": cls.winevent(count=1, observables=observables)[0]},
-                        {"event": cls.json(count=1, observables=observables)[0]}
+                        {"event": cls.syslog(count=1, timestamp=timestamp, observables=observables)[0]},
+                        {"event": cls.cef(count=1, timestamp=timestamp, observables=observables)[0]},
+                        {"event": cls.leef(count=1, timestamp=timestamp, observables=observables)[0]},
+                        {"event": cls.winevent(count=1, timestamp=timestamp, observables=observables)[0]},
+                        {"event": cls.json(count=1, timestamp=timestamp, observables=observables)[0]}
                     ]
             else:
                 incident = {
