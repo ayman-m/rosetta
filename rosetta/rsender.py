@@ -4,20 +4,10 @@ import threading
 import socket
 import requests
 import warnings
-from enum import Enum
 from typing import Optional
 from urllib3.exceptions import InsecureRequestWarning
 
 from rosetta.rfaker import Observables, Events
-
-
-class WorkerTypeEnum(Enum):
-    SYSLOG = 'syslog'
-    CEF = 'cef'
-    LEEF = 'leef'
-    WINEVENT = 'winevent'
-    JSON = 'json'
-    INCIDENT = 'incident'
 
 
 class Sender:
@@ -26,7 +16,7 @@ class Sender:
 
     Args:
         worker_name (str): Name of the worker.
-        data_type (WorkerTypeEnum): Type of the data to send.
+        data_type (str): Type of the data to send.
         count (int): Number of messages to send.
         interval (int): Time interval (in seconds) between each message sent.
         destination (str): Destination address in the format <protocol>://<ip_address>:<port>.
@@ -65,7 +55,7 @@ class Sender:
                 None.
     """
 
-    def __init__(self, data_type: WorkerTypeEnum, destination: str,
+    def __init__(self, data_type: str, destination: str,
                  worker_name: Optional[str] = 'worker_'+str(datetime.now()), count: Optional[int] = 1,
                  interval: Optional[int] = 1, observables: Optional[Observables] = None, fields: Optional[str] = None,
                  verify_ssl: Optional[bool] = None, datetime_obj: Optional[datetime] = None):
@@ -73,12 +63,12 @@ class Sender:
         Constructor for DataSenderWorker class.
 
         :param data_type: A value from the WorkerTypeEnum indicating the type of data to send. Options include:
-            - WorkerTypeEnum.SYSLOG
-            - WorkerTypeEnum.CEF
-            - WorkerTypeEnum.LEEF
-            - WorkerTypeEnum.WINEVENT
-            - WorkerTypeEnum.JSON
-            - WorkerTypeEnum. INCIDENT
+            - SYSLOG
+            - CEF
+            - LEEF
+            - WINEVENT
+            - JSON
+            - INCIDENT
         :param destination: str, destination address and port in the format <scheme>://<address>:<port>.
         :param worker_name: str, name of the worker.
         :param count: int, number of times to send the data.
@@ -139,12 +129,12 @@ class Sender:
         while self.status == "Running" and self.count > 0:
             try:
                 self.count -= 1
-                if self.data_type in [WorkerTypeEnum.SYSLOG, WorkerTypeEnum.CEF, WorkerTypeEnum.LEEF]:
-                    if self.data_type == WorkerTypeEnum.SYSLOG:
+                if self.data_type in ["SYSLOG", "CEF", "LEEF"]:
+                    if self.data_type == "SYSLOG":
                         fake_message = Events.syslog(count=1, timestamp=self.datetime_obj, observables=self.observables)
-                    if self.data_type == WorkerTypeEnum.CEF:
+                    if self.data_type == "CEF":
                         fake_message = Events.cef(count=1, timestamp=self.datetime_obj, observables=self.observables)
-                    if self.data_type == WorkerTypeEnum.LEEF:
+                    if self.data_type == "LEEF":
                         fake_message = Events.leef(count=1, timestamp=self.datetime_obj, observables=self.observables)
                     ip_address = self.destination.split(':')[1]
                     port = self.destination.split(':')[2]
@@ -160,10 +150,10 @@ class Sender:
                         sock.settimeout(5)
                         print(f"Worker: {self.worker_name} sending log message to {ip_address} ")
                         sock.sendto(fake_message[0].encode(), (ip_address, int(port)))
-                elif self.data_type in [WorkerTypeEnum.JSON, WorkerTypeEnum.INCIDENT]:
-                    if self.data_type == WorkerTypeEnum.JSON:
+                elif self.data_type in ["JSON", "INCIDENT"]:
+                    if self.data_type == "JSON":
                         fake_message = Events.json(count=1, timestamp=self.datetime_obj, observables=self.observables)
-                    if self.data_type == WorkerTypeEnum.INCIDENT:
+                    if self.data_type == "INCIDENT":
                         fake_message = [{
                             "alert": Events.incidents(count=1, observables=self.observables, fields=self.fields)
                         }]
