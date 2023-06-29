@@ -301,14 +301,18 @@ class Events:
         return syslog_messages
 
     @classmethod
-    def cef(cls, count: int, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[str]:
+    def cef(cls, count: int, vendor: Optional[str] = None, product: Optional[str] = None, version: Optional[str] = None,
+            timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[str]:
         """
         Generates fake CEF (Common Event Format) messages.
 
         Args:
             count: The number of CEF messages to generate.
-            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
-            observables: An observables object. If not provided, random objservable will be generated and used.
+            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during.
+            vendor: Optional. The vendor.
+            product: Optional. The product.
+            version: Optional. The version.
+            observables: Optional. An observables object. If not provided, random objservable will be generated and used.
         Returns:
             A list of fake CEF messages in string format.
 
@@ -329,14 +333,15 @@ class Events:
         """
         cef_messages = []
         faker = cls._create_faker()
-        version = faker.numerify("1.0.#")
+        version = version or faker.numerify("1.0.#")
         if timestamp is None:
             timestamp = datetime.now() - timedelta(hours=1)
             timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
         for i in range(count):
             timestamp += timedelta(seconds=1)
             uuid = faker.uuid4()
-            vendor = faker.company()
+            vendor = vendor or faker.company()
+            product = product or "Firewall"
             src_port = faker.random_int(min=1024, max=65535)
             host = random.choice(observables.src_host) if observables and observables.src_host \
                 else faker.hostname()
@@ -353,19 +358,24 @@ class Events:
             event_id = random.choice(observables.event_id) if observables and observables.event_id \
                 else faker.random_int(min=1, max=10)
             event_description = f"Firewall {action} {protocol} traffic from {host}:{src_port} to {dst_ip}:{dst_port}"
-            cef_messages.append(f"CEF:0|{vendor}|Firewall|{version}|{uuid}|{timestamp}|"
+            cef_messages.append(f"CEF:0|{vendor}|{product}|{version}|{uuid}|{timestamp}|"
                                 f"{event_description}|{event_id}|src={host} spt={src_port} dst={dst_ip} url={url}"
                                 f"dpt={dst_port} proto={protocol} act={action}")
         return cef_messages
 
     @classmethod
-    def leef(cls, count, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[str]:
+    def leef(cls, count, timestamp: Optional[datetime] = None, vendor: Optional[str] = None,
+             product: Optional[str] = None, version: Optional[str] = None,
+             observables: Optional[Observables] = None) -> List[str]:
         """
         Generates fake LEEF (Log Event Extended Format) messages.
 
         Parameters:
             count (int): The number of LEEF messages to generate.
-            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
+            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during.
+            vendor: Optional. The vendor.
+            product: Optional. The product.
+            version: Optional. The version.
             observables: An observables object. If not provided, random objservable will be generated and used.
 
         Returns:
@@ -388,11 +398,14 @@ class Events:
         """
         leef_messages = []
         faker = cls._create_faker()
+        version = version or faker.numerify("1.0.#")
         if timestamp is None:
             timestamp = datetime.now() - timedelta(hours=1)
             timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
         for i in range(count):
             timestamp += timedelta(seconds=1)
+            vendor = vendor or faker.company()
+            product = product or "Application Server"
             src_port = faker.random_int(min=1024, max=65535)
             request_size = faker.random_int(min=100, max=10000)
             response_size = faker.random_int(min=100, max=10000)
@@ -410,7 +423,7 @@ class Events:
             error_code = random.choice(observables.error_code) if observables and observables.error_code \
                 else random.choice(ERROR_CODE)
 
-            leef_log = f"LEEF:1.0|Leef|Payment Portal|1.0|deviceEventDate={timestamp}|{faker.ipv4()}|{host}|" \
+            leef_log = f"LEEF:1.0|{vendor}|{product}|{version}|deviceEventDate={timestamp}|{faker.ipv4()}|{host}|" \
                        f"{faker.mac_address()}|{faker.mac_address()}|"
             leef_log += f"src={src_ip} dst={host} spt={src_port} dpt=443 request={url} "
             leef_log += f"method={method} proto=HTTP/1.1 status={str(error_code)} hash={file_hash}"
