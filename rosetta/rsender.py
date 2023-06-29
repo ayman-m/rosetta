@@ -166,7 +166,8 @@ class Sender:
                         fake_message = Events.json(count=1, timestamp=self.datetime_obj, observables=self.observables)
                     if self.data_type == "INCIDENT":
                         fake_message = [{
-                            "alert": Events.incidents(count=1, observables=self.observables, fields=self.fields)
+                            "alert": Events.incidents(count=1, observables=self.observables, vendor=self.vendor,
+                                                      version=self.version, product=self.product, fields=self.fields)
                         }]
                     if '://' not in self.destination:
                         url = 'http://' + self.destination
