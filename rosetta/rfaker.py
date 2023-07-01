@@ -29,11 +29,6 @@ class ObservableKnown(Enum):
     GOOD = 'good'
 
 
-class CEFDevices(Enum):
-    Firewall = "Firewall"
-    EmailGW = "EmailGW"
-
-
 class Observables:
     def __init__(self, src_ip: list = None, dst_ip: Optional[list] = None, src_host: Optional[list] = None,
                  dst_host: Optional[list] = None, src_domain: Optional[list] = None, dst_domain: Optional[list] = None,
@@ -148,7 +143,7 @@ class Observables:
         - A list of generated observables.
 
         Raises:
-        - Exception: If the function fails to retrieve data from any configured source with a HTTP status code other
+        - Exception: If the function fails to retrieve data from any configured source with an HTTP status code other
             than 200.
         """
         faker = cls._create_faker()
@@ -274,7 +269,8 @@ class Events:
         return Observables()
 
     @classmethod
-    def syslog(cls, count: int, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[str]:
+    def syslog(cls, count: int, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> \
+            List[str]:
         """
         Generate fake syslog messages.
 
@@ -282,7 +278,8 @@ class Events:
             count: The number of syslog messages to generate.
             timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
             the past hour from now will be used.
-            observables: Optional. An observables object. If not provided, random objservable will be generated and used.
+            observables: Optional. An observables object. If not provided, random objservable will be generated
+            and used.
         Returns:
             A list of syslog messages.
 
@@ -317,7 +314,7 @@ class Events:
         return syslog_messages
 
     @classmethod
-    def cef(cls, count: int, vendor: Optional[str] = None, product: Optional[CEFDevices] = CEFDevices.Firewall,
+    def cef(cls, count: int, vendor: Optional[str] = None, product: Optional[str] = None,
             version: Optional[str] = None, timestamp: Optional[datetime] = None,
             observables: Optional[Observables] = None) -> List[str]:
         """
@@ -331,7 +328,8 @@ class Events:
             - Firewall
             - EmailGW
             version: Optional. The version.
-            observables: Optional. An observables object. If not provided, random objservable will be generated and used.
+            observables: Optional. An observables object. If not provided, random objservable will be generated
+            and used.
         Returns:
             A list of fake CEF messages in string format.
 
@@ -357,7 +355,7 @@ class Events:
         if timestamp is None:
             timestamp = datetime.now() - timedelta(hours=1)
             timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
-        if product.name == "Firewall":
+        if product == "Firewall":
             for i in range(count):
                 log_id = faker.uuid4()
                 timestamp += timedelta(seconds=1)
@@ -374,7 +372,8 @@ class Events:
                     else Observables.generator(observable_type=ObservableType.URL, known=ObservableKnown.BAD, count=1)
                 inbound_bytes = random.choice(observables.inbound_bytes) if observables and observables.inbound_bytes \
                     else faker.random_int(min=10, max=1073741824)
-                outbound_bytes = random.choice(observables.outbound_bytes) if observables and observables.outbound_bytes \
+                outbound_bytes = random.choice(observables.outbound_bytes) if observables and \
+                    observables.outbound_bytes \
                     else faker.random_int(min=10, max=1073741824)
                 protocol = random.choice(observables.protocol) if observables and observables.protocol \
                     else random.choice(PROTOCOLS)
@@ -382,12 +381,13 @@ class Events:
                     else faker.random_int(min=1, max=200)
                 action = random.choice(observables.action) if observables and observables.action \
                     else random.choice(ACTIONS)
-                event_description = f"Firewall {action} {protocol} traffic from {src_ip}:{src_port} to {dst_ip}:{dst_port}"
-                cef_messages.append(f"CEF:0|{vendor}|{product.name}|{version}|{log_id}|{timestamp}|{severity}|"
-                                    f"{event_description}|src={src_ip} spt={src_port} dst={dst_ip} url={dst_url}"
-                                    f"dpt={dst_port} in_bytes={inbound_bytes} out_bytes={outbound_bytes} proto={protocol}"
-                                    f" rule={rule_id} act={action}")
-        elif product.name == "EmailGW":
+                event_description = f"Firewall {action} {protocol} traffic from {src_ip}:{src_port} to " \
+                                    f"{dst_ip}:{dst_port}"
+                cef_messages.append(f"CEF:0|{vendor}|{product}|{version}|{log_id}|{timestamp}|{severity}|"
+                                    f"{event_description}|src_ip={src_ip} src_port={src_port} dst_ip={dst_ip} "
+                                    f"url={dst_url} dst_port={dst_port} in_bytes={inbound_bytes} "
+                                    f"out_bytes={outbound_bytes} proto={protocol} rule={rule_id} act={action}")
+        elif product == "EmailGW":
             for i in range(count):
                 mail_id = faker.uuid4()
                 timestamp += timedelta(seconds=1)
@@ -399,8 +399,8 @@ class Events:
                     else faker.email()
                 recipient_email = random.choice(observables.recipient_email) if observables and \
                     observables.recipient_email else faker.email()
-                email_subject = random.choice(observables.email_subject) if observables and observables.email_subject else \
-                    faker.sentence(nb_words=6)
+                email_subject = random.choice(observables.email_subject) if observables and observables.email_subject \
+                    else faker.sentence(nb_words=6)
                 email_body = random.choice(observables.email_body) if observables and observables.email_body else \
                     faker.sentence(nb_words=50)
                 attachment_hash = random.choice(observables.file_hash) if observables and observables.file_hash \
@@ -409,11 +409,38 @@ class Events:
                 spam_score = faker.random_int(min=1, max=5)
                 action = random.choice(observables.action) if observables and observables.action \
                     else random.choice(ACTIONS)
-                cef_messages.append(f"CEF:0|{vendor}|{product.name}|{version}|{mail_id}|{timestamp}|"
-                                    f"src={src_ip} src_domain={src_domain} sender_email={sender_email} "
+                cef_messages.append(f"CEF:0|{vendor}|{product}|{version}|{mail_id}|{timestamp}|"
+                                    f"src_ip={src_ip} src_domain={src_domain} sender_email={sender_email} "
                                     f"recipient_email={recipient_email} email_subject={email_subject} "
                                     f"email_body={email_body} attachment_hash={attachment_hash} spam_score={spam_score}"
                                     f" action={action}")
+        else:
+            for i in range(count):
+                log_id = faker.uuid4()
+                timestamp += timedelta(seconds=1)
+                severity = random.choice(observables.severity) if observables and observables.severity \
+                    else faker.random_int(min=1, max=5)
+                src_ip = random.choice(observables.src_ip) if observables and observables.src_ip \
+                    else faker.ipv4()
+                src_port = faker.random_int(min=1024, max=65535)
+                dst_ip = random.choice(observables.dst_ip) if observables and observables.dst_ip \
+                    else Observables.generator(observable_type=ObservableType.IP, known=ObservableKnown.BAD, count=1)
+                dst_port = random.choice(observables.port) if observables and observables.port \
+                    else faker.random_int(min=1024, max=65535)
+                protocol = random.choice(observables.protocol) if observables and observables.protocol \
+                    else random.choice(PROTOCOLS)
+                rule_id = random.choice(observables.event_id) if observables and observables.event_id \
+                    else faker.random_int(min=1, max=200)
+                action = random.choice(observables.action) if observables and observables.action \
+                    else random.choice(ACTIONS)
+                generic_cef = f"CEF:0|{vendor}|{product}|{version}|{log_id}|{timestamp}|{severity}|src_ip={src_ip} " \
+                              f"src_port={src_port} dst_ip={dst_ip} dst_port={dst_port} proto={protocol} " \
+                              f"rule={rule_id} act={action}"
+                if observables:
+                    for observable, observable_value in vars(observables).items():
+                        if observable_value:
+                            generic_cef += f" {observable}={random.choice(observable_value)}"
+                cef_messages.append(generic_cef)
         return cef_messages
 
     @classmethod
@@ -451,43 +478,79 @@ class Events:
         """
         leef_messages = []
         faker = cls._create_faker()
+        vendor = vendor or faker.company()
         version = version or faker.numerify("1.0.#")
         if timestamp is None:
             timestamp = datetime.now() - timedelta(hours=1)
             timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
-        for i in range(count):
-            timestamp += timedelta(seconds=1)
-            vendor = vendor or faker.company()
-            product = product or "Application Server"
-            src_port = faker.random_int(min=1024, max=65535)
-            request_size = faker.random_int(min=100, max=10000)
-            response_size = faker.random_int(min=100, max=10000)
-            user_agent = faker.user_agent()
-            host = random.choice(observables.src_host) if observables and observables.src_host \
-                else faker.hostname()
-            src_ip = random.choice(observables.src_ip) if observables and observables.src_ip \
-                else faker.ipv4()
-            url = random.choice(observables.technique).get('indicator') if observables and observables.technique \
-                else random.choice(TECHNIQUES).get('indicator')
-            file_hash = random.choice(observables.file_hash) if observables and observables.file_hash \
-                else Observables.generator(observable_type=ObservableType.SHA256, known=ObservableKnown.BAD, count=1)
-            method = random.choice(observables.technique).get('mechanism') if observables and observables.technique \
-                else random.choice(TECHNIQUES).get('mechanism')
-            error_code = random.choice(observables.error_code) if observables and observables.error_code \
-                else random.choice(ERROR_CODE)
-
-            leef_log = f"LEEF:1.0|{vendor}|{product}|{version}|deviceEventDate={timestamp}|{faker.ipv4()}|{host}|" \
-                       f"{faker.mac_address()}|{faker.mac_address()}|"
-            leef_log += f"src={src_ip} dst={host} spt={src_port} dpt=443 request={url} "
-            leef_log += f"method={method} proto=HTTP/1.1 status={str(error_code)} hash={file_hash}"
-            leef_log += f"request_size={request_size} " \
-                        f"response_size={response_size} "
-            leef_log += f"user_agent={user_agent}"
-            leef_messages.append(leef_log)
+        if product == "WAF":
+            for i in range(count):
+                timestamp += timedelta(seconds=1)
+                severity = random.choice(observables.severity) if observables and observables.severity \
+                    else faker.random_int(min=1, max=5)
+                src_ip = random.choice(observables.src_ip) if observables and observables.src_ip \
+                    else faker.ipv4()
+                src_port = faker.random_int(min=1024, max=65535)
+                host = random.choice(observables.src_host) if observables and observables.src_host \
+                    else faker.hostname()
+                method = random.choice(observables.technique).get('mechanism') if observables and observables.technique \
+                    else random.choice(TECHNIQUES).get('mechanism')
+                url = random.choice(observables.technique).get('indicator') if observables and observables.technique \
+                    else random.choice(TECHNIQUES).get('indicator')
+                protocol = random.choice(observables.protocol) if observables and observables.protocol \
+                    else random.choice(PROTOCOLS)
+                user_agent = faker.user_agent()
+                referer = random.choice(observables.url) if observables and observables.url \
+                    else Observables.generator(observable_type=ObservableType.URL, known=ObservableKnown.BAD, count=1)
+                response_code = random.choice(observables.error_code) if observables and observables.error_code \
+                    else random.choice(ERROR_CODE)
+                response_size = faker.random_int(min=100, max=10000)
+                rule_id = random.choice(observables.event_id) if observables and observables.event_id \
+                    else faker.random_int(min=1, max=200)
+                action = random.choice(observables.action) if observables and observables.action \
+                    else random.choice(ACTIONS)
+                attack_type = random.choice(observables.technique).get('technique') if observables and \
+                    observables.technique else random.choice(TECHNIQUES).get('technique')
+                cookie_name = faker.word()
+                cookie_value = faker.uuid4()
+                cookies = f"{cookie_name}={cookie_value}"
+                leef_log = f"LEEF:1.0|{vendor}|{product}|{version}|deviceEventDate={timestamp}|{faker.ipv4()}|{host}|"
+                leef_log += f"src_ip={src_ip} src_port={src_port} request_url={url} method={method} referer={referer} "
+                leef_log += f"protocol={protocol} status={str(response_code)} action={action} attack_type={attack_type}"
+                leef_log += f" response_size={response_size} rule_id={rule_id} user_agent={user_agent} "
+                leef_log += f"severity={severity} cookie={cookies}"
+                leef_messages.append(leef_log)
+        else:
+            for i in range(count):
+                timestamp += timedelta(seconds=1)
+                severity = random.choice(observables.severity) if observables and observables.severity \
+                    else faker.random_int(min=1, max=5)
+                src_ip = random.choice(observables.src_ip) if observables and observables.src_ip \
+                    else faker.ipv4()
+                src_port = faker.random_int(min=1024, max=65535)
+                host = random.choice(observables.src_host) if observables and observables.src_host \
+                    else faker.hostname()
+                url = random.choice(observables.technique).get('indicator') if observables and observables.technique \
+                    else random.choice(TECHNIQUES).get('indicator')
+                protocol = random.choice(observables.protocol) if observables and observables.protocol \
+                    else random.choice(PROTOCOLS)
+                response_code = random.choice(observables.error_code) if observables and observables.error_code \
+                    else random.choice(ERROR_CODE)
+                action = random.choice(observables.action) if observables and observables.action \
+                    else random.choice(ACTIONS)
+                leef_log = f"LEEF:1.0|{vendor}|{product}|{version}|deviceEventDate={timestamp}|{faker.ipv4()}|{host}|"
+                leef_log += f"src_ip={src_ip} src_port={src_port} request_url={url} protocol={protocol} "
+                leef_log += f"status={str(response_code)} action={action} severity={severity}"
+                if observables:
+                    for observable, observable_value in vars(observables).items():
+                        if observable_value:
+                            leef_log += f" {observable}={random.choice(observable_value)}"
+                leef_messages.append(leef_log)
         return leef_messages
 
     @classmethod
-    def winevent(cls, count, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[str]:
+    def winevent(cls, count, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> \
+            List[str]:
         """
         Generates fake Windows Event Log messages.
 
@@ -551,13 +614,18 @@ class Events:
         return winevent_messages
 
     @classmethod
-    def json(cls, count, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> List[dict]:
+    def json(cls, count, timestamp: Optional[datetime] = None, vendor: Optional[str] = None,
+             product: Optional[str] = None, version: Optional[str] = None, observables: Optional[Observables] = None) -> List[dict]:
         """
         Generate fake JSON messages representing discovered vulnerabilities.
 
         Args:
             count (int): The number of JSON messages to generate.
-            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
+            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during.
+            vendor: Optional. The vendor.
+            product: Optional. The product value options include:
+            - VulnScanner
+            version: Optional. The version.
             observables: An observables object. If not provided, random objservable will be generated and used.
         Returns:
             List[Dict[str, Union[str, int]]]: A list of dictionaries representing the generated JSON messages.
@@ -572,29 +640,59 @@ class Events:
         """
         json_messages = []
         faker = cls._create_faker()
+        vendor = vendor or faker.company()
+        version = version or faker.numerify("1.0.#")
         if timestamp is None:
             timestamp = datetime.now() - timedelta(hours=1)
             timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
-        for i in range(count):
-            timestamp += timedelta(seconds=1)
-            system_time = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-            cve_id = random.choice(observables.cve) if observables and observables.cve \
-                else Observables.generator(observable_type=ObservableType.CVE, count=1)
-            host = random.choice(observables.src_host) if observables and observables.src_host \
-                else faker.hostname()
-            severity = random.choice(observables.severity) if observables and observables.severity \
-                else faker.random_int(min=1, max=5)
-            file_hash = random.choice(observables.file_hash) if observables and observables.file_hash \
-                else Observables.generator(observable_type=ObservableType.SHA256, known=ObservableKnown.BAD, count=1)
-            event = {
-                'event_type': 'vulnerability_discovered',
-                'timestamp': system_time,
-                'severity': severity,
-                'host': host,
-                'file_hash': file_hash,
-                'cve': cve_id
-            }
-            json_messages.append(event)
+        if product == "VulnScanner":
+            for i in range(count):
+                timestamp += timedelta(seconds=1)
+                system_time = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                cve_id = random.choice(observables.cve) if observables and observables.cve \
+                    else Observables.generator(observable_type=ObservableType.CVE, count=1)
+                host = random.choice(observables.src_host) if observables and observables.src_host \
+                    else faker.hostname()
+                severity = random.choice(observables.severity) if observables and observables.severity \
+                    else faker.random_int(min=1, max=5)
+                file_hash = random.choice(observables.file_hash) if observables and observables.file_hash \
+                    else Observables.generator(observable_type=ObservableType.SHA256, known=ObservableKnown.BAD, count=1)
+                event = {
+                    'vendor': vendor,
+                    'product': product,
+                    'version': version,
+                    'event_type': 'vulnerability_discovered',
+                    'timestamp': system_time,
+                    'severity': severity,
+                    'host': host,
+                    'file_hash': file_hash,
+                    'cve': cve_id
+                }
+                json_messages.append(event)
+        else:
+            for i in range(count):
+                timestamp += timedelta(seconds=1)
+                system_time = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                user = random.choice(observables.user) if observables and observables.user \
+                    else faker.user_name()
+                host = random.choice(observables.src_host) if observables and observables.src_host \
+                    else faker.hostname()
+                severity = random.choice(observables.severity) if observables and observables.severity \
+                    else faker.random_int(min=1, max=5)
+                event = {
+                    'vendor': vendor,
+                    'product': product,
+                    'version': version,
+                    'timestamp': system_time,
+                    'severity': severity,
+                    'host': host,
+                    'user': user
+                }
+                if observables:
+                    for observable, observable_value in vars(observables).items():
+                        if observable_value:
+                            event[observable] = random.choice(observable_value)
+                json_messages.append(event)
         return json_messages
 
     @classmethod

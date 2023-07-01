@@ -44,74 +44,39 @@
   "WAF": {
     "format": "LEEF",
     "fields": [
-      "Timestamp",
-      "Vendor",
-      "Product",
-      "Version",
-      "EventSeverity",
-      "EventClassID",
-      "Client_IP",
-      "Client_Port",
-      "Host",
-      "Method",
-      "URI",
-      "Protocol",
-      "User_Agent",
-      "Referer",
-      "Response_Code",
-      "Response_Size",
-      "Rule_ID",
-      "Rule_Action",
-      "Attack_Type",
-      "Cookies"
+      "vendor",
+      "product",
+      "version",
+      "timestamp",
+      "severity",
+      "src_ip",
+      "src_port",
+      "host",
+      "method",
+      "uri",
+      "protocol",
+      "user_agent",
+      "referer",
+      "response_code",
+      "response_size",
+      "rule_id",
+      "action",
+      "attack_type",
+      "cookies"
     ]
   },
-    "WEB_APP": {
-    "format": "LEEF",
-    "fields": [
-      "Timestamp",
-      "Vendor",
-      "Product",
-      "Version",
-      "Client_IP",
-      "IdentD",
-      "UserID",
-      "Request_Line",
-      "Status_Code",
-      "Response_Size",
-      "Referer",
-      "User_Agent"
-    ]
-  },
-    "Deceptor": {
-    "format": "LEEF",
-    "fields": [
-      "Timestamp",
-      "Vendor",
-      "Product",
-      "Version",
-      "Deceptor_ID",
-      "Deceptor_Type",
-      "Attacker_IP",
-      "Request_Details",
-      "Response_Details",
-      "Event_Type",
-      "Detection_Level",
-      "Action_Taken"
-    ]
-  },
-    "Linux": {
-    "format": "SYSLOG",
-    "fields": [
-      "Timestamp",
-      "PID",
-      "Action",
-      "Host",
-      "User",
-      "Process",
-      "Command"
-    ]
-  },
+  "Linux": {
+  "format": "SYSLOG",
+  "fields": [
+    "Timestamp",
+    "PID",
+    "Action",
+    "Host",
+    "User",
+    "Process",
+    "Command"
+  ]
+},
   "DB": {
     "format": "SYSLOG",
     "fields": [
@@ -198,24 +163,24 @@
       "Details"
     ]
   },
-    "WEC": {
-    "format": "XML",
-    "fields": [
-      "Timestamp",
-      "Computer",
-      "EventID",
-      "LogName",
-      "RecordID",
-      "Process_ID",
-      "Thread_ID",
-      "Channel",
-      "UserID",
-      "Level",
-      "Task",
-      "Opcode",
-      "Keywords",
-      "Message",
-      "EventData"
-    ]
-  }
+  "WEC": {
+  "format": "XML",
+  "fields": [
+    "Timestamp",
+    "Computer",
+    "EventID",
+    "LogName",
+    "RecordID",
+    "Process_ID",
+    "Thread_ID",
+    "Channel",
+    "UserID",
+    "Level",
+    "Task",
+    "Opcode",
+    "Keywords",
+    "Message",
+    "EventData"
+  ]
+}
 }
