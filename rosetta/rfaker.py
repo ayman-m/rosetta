@@ -788,7 +788,8 @@ class Events:
                         {"event": cls.leef(count=1, timestamp=timestamp, vendor=vendor, product=product,
                                            version=version, observables=observables)[0]},
                         {"event": cls.winevent(count=1, timestamp=timestamp, observables=observables)[0]},
-                        {"event": cls.json(count=1, timestamp=timestamp, observables=observables)[0]}
+                        {"event": cls.json(count=1, timestamp=timestamp, vendor=vendor, product=product,
+                                           version=version, observables=observables)[0]}
                     ]
             else:
                 incident = {
