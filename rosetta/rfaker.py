@@ -35,16 +35,17 @@ class Observables:
                  dst_host: Optional[list] = None, src_domain: Optional[list] = None, dst_domain: Optional[list] = None,
                  sender_email: Optional[list] = None, recipient_email: Optional[list] = None,
                  email_subject: Optional[list] = None, email_body: Optional[list] = None,
-                 url: Optional[list] = None, port: Optional[list] = None, protocol: Optional[list] = None,
-                 inbound_bytes: Optional[list] = None, outbound_bytes: Optional[list] = None,
-                 app: Optional[list] = None, os: Optional[list] = None, user: Optional[list] = None,
-                 cve: Optional[list] = None, file_name: Optional[list] = None, file_hash: Optional[list] = None,
-                 cmd: Optional[list] = None, process: Optional[list] = None, technique: Optional[list] = None,
-                 entry_type: Optional[list] = None, severity: Optional[list] = None, sensor: Optional[list] = None,
-                 action: Optional[list] = None, event_id: Optional[list] = None, error_code: Optional[list] = None,
-                 terms: Optional[list] = None, alert_types: Optional[list] = None, alert_name: Optional[list] = None,
-                 incident_types: Optional[list] = None, analysts: Optional[list] = None,
-                 action_status: Optional[list] = None):
+                 url: Optional[list] = None, source_port: Optional[list] = None, remote_port: Optional[list] = None,
+                 protocol: Optional[list] = None, inbound_bytes: Optional[list] = None,
+                 outbound_bytes: Optional[list] = None, app: Optional[list] = None, os: Optional[list] = None,
+                 user: Optional[list] = None, cve: Optional[list] = None, file_name: Optional[list] = None,
+                 file_hash: Optional[list] = None, win_cmd: Optional[list] = None, unix_cmd: Optional[list] = None,
+                 win_process: Optional[list] = None, unix_process: Optional[list] = None,
+                 technique: Optional[list] = None, entry_type: Optional[list] = None, severity: Optional[list] = None,
+                 sensor: Optional[list] = None, action: Optional[list] = None, event_id: Optional[list] = None,
+                 error_code: Optional[list] = None, terms: Optional[list] = None, alert_types: Optional[list] = None,
+                 alert_name: Optional[list] = None, incident_types: Optional[list] = None,
+                 analysts: Optional[list] = None, action_status: Optional[list] = None):
         self.local_ip = local_ip
         self.remote_ip = remote_ip
         self.local_ip_v6 = local_ip_v6
@@ -58,7 +59,8 @@ class Observables:
         self.email_subject = email_subject
         self.email_body = email_body
         self.url = url
-        self.port = port
+        self.source_port = source_port
+        self.remote_port = remote_port
         self.protocol = protocol
         self.inbound_bytes = inbound_bytes
         self.outbound_bytes = outbound_bytes
@@ -68,8 +70,10 @@ class Observables:
         self.cve = cve
         self.file_name = file_name
         self.file_hash = file_hash
-        self.cmd = cmd
-        self.process = process
+        self.win_cmd = win_cmd
+        self.unix_cmd = unix_cmd
+        self.win_process = win_process
+        self.unix_process = unix_process
         self.technique = technique
         self.entry_type = entry_type
         self.severity = severity
@@ -293,10 +297,10 @@ class Events:
             field_value = random.choice(observables.user) if observables and observables.user \
                 else faker.user_name()
         if field == "unix_process":
-            field_value = random.choice(observables.process) if observables and observables.process \
+            field_value = random.choice(observables.unix_process) if observables and observables.unix_process \
                 else "sudo"
         if field == "unix_cmd":
-            field_value = random.choice(observables.cmd) if observables and observables.cmd \
+            field_value = random.choice(observables.unix_cmd) if observables and observables.unix_cmd \
                 else random.choice(UNIX_CMD)
         if field == "severity":
             field_value = random.choice(observables.severity) if observables and observables.severity \
@@ -310,7 +314,7 @@ class Events:
             field_value = random.choice(observables.remote_ip) if observables and observables.remote_ip \
                     else Observables.generator(observable_type=ObservableType.IP, known=ObservableKnown.BAD, count=1)
         if field == "remote_port":
-            field_value = random.choice(observables.port) if observables and observables.port \
+            field_value = random.choice(observables.remote_port) if observables and observables.remote_port \
                     else faker.random_int(min=1024, max=65535)
         if field == "dst_url":
             field_value = random.choice(observables.url) if observables and observables.url \
@@ -335,6 +339,9 @@ class Events:
                     else faker.domain_name()
         if field == "sender_email":
             field_value = random.choice(observables.sender_email) if observables and observables.sender_email \
+                    else faker.email()
+        if field == "recipient_email":
+            field_value = random.choice(observables.recipient_email) if observables and observables.recipient_email \
                     else faker.email()
         if field == "email_subject":
             field_value = random.choice(observables.email_subject) if observables and observables.email_subject \
@@ -392,11 +399,11 @@ class Events:
         if field == "event_record_id":
             field_value = random.choice(observables.event_id) if observables and observables.event_id \
                 else faker.random.randint(1, 999)
-        if field == "win_process_name":
-            field_value = random.choice(observables.process) if observables and observables.process \
+        if field == "win_process":
+            field_value = random.choice(observables.win_process) if observables and observables.win_process \
                 else random.choice(WIN_PROCESSES)
         if field == "win_cmd":
-            field_value = random.choice(observables.cmd) if observables and observables.cmd \
+            field_value = random.choice(observables.win_cmd) if observables and observables.win_cmd \
                 else random.choice(WINDOWS_CMD)
         if field == "source_network_address":
             field_value = random.choice(observables.local_ip) if observables and observables.local_ip \
@@ -425,7 +432,7 @@ class Events:
 
     @classmethod
     def syslog(cls, count: int, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None,
-               required_fields: Optional[str] = "pid,host,user,unix_process,unix_cmd") -> List[str]:
+               required_fields: Optional[str] = None) -> List[str]:
         """
         Generate fake syslog messages.
 
@@ -454,6 +461,8 @@ class Events:
         if timestamp is None:
             timestamp = datetime.now() - timedelta(hours=1)
             timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
+        if not required_fields:
+            required_fields = "pid,host,user,unix_process,unix_cmd"
         for i in range(count):
             timestamp += timedelta(seconds=1)
             syslog_message = f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
@@ -590,7 +599,7 @@ class Events:
                 for observable, observable_value in vars(observables).items():
                     if observable_value and observable not in required_fields.split(","):
                         leef_message += f" {observable}={random.choice(observable_value)}"
-            leef_messages.append(required_fields)
+            leef_messages.append(leef_message)
         return leef_messages
 
     @classmethod
@@ -633,13 +642,13 @@ class Events:
             privilege_list = faker.sentence(nb_words=5)
             event_record_id = random.choice(observables.event_id) if observables and observables.event_id \
                 else faker.random.randint(1, 999)
-            process_name = random.choice(observables.process) if observables and observables.process \
+            process_name = random.choice(observables.win_process) if observables and observables.win_process \
                 else random.choice(WIN_PROCESSES)
             host = random.choice(observables.src_host) if observables and observables.src_host \
                 else faker.hostname()
             user_name = random.choice(observables.user) if observables and observables.user \
                 else faker.user_name()
-            cmd = random.choice(observables.cmd) if observables and observables.cmd \
+            cmd = random.choice(observables.win_cmd) if observables and observables.win_cmd \
                 else random.choice(WINDOWS_CMD)
             source_network_address = random.choice(observables.local_ip) if observables and observables.local_ip \
                 else faker.ipv4_private()
