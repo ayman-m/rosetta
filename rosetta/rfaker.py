@@ -30,7 +30,8 @@ class ObservableKnown(Enum):
 
 
 class Observables:
-    def __init__(self, src_ip: list = None, dst_ip: Optional[list] = None, src_host: Optional[list] = None,
+    def __init__(self, src_ip: list = None, dst_ip: Optional[list] = None, src_ipv6: list = None,
+                 dst_ipv6: Optional[list] = None, src_host: Optional[list] = None,
                  dst_host: Optional[list] = None, src_domain: Optional[list] = None, dst_domain: Optional[list] = None,
                  sender_email: Optional[list] = None, recipient_email: Optional[list] = None,
                  email_subject: Optional[list] = None, email_body: Optional[list] = None,
@@ -44,6 +45,8 @@ class Observables:
                  terms: Optional[list] = None, incident_types: Optional[list] = None, analysts: Optional[list] = None):
         self.src_ip = src_ip
         self.dst_ip = dst_ip
+        self.src_ipv6 = src_ipv6
+        self.dst_ipv6 = dst_ipv6
         self.src_host = src_host
         self.dst_host = dst_host
         self.src_domain = src_domain
