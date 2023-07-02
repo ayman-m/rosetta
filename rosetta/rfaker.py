@@ -718,7 +718,7 @@ class Events:
     @classmethod
     def incidents(cls, count, fields: Optional[str] = None, timestamp: Optional[datetime] = None,
                   vendor: Optional[str] = None, product: Optional[str] = None, version: Optional[str] = None,
-                  observables: Optional[Observables] = None) -> List[dict]:
+                  observables: Optional[Observables] = None, required_fields: Optional[str] = None) -> List[dict]:
         """
         Generates a list of fake incident data.
 
@@ -732,6 +732,8 @@ class Events:
             version: Optional. The version.
             timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
             observables: An observables object. If not provided, random objservable will be generated and used.
+            required_fields: Optional. A list of fields that are required to present in the generated data, whether from
+            observables or randomely.
 
         Returns:
             List[Dict]: A list of incident dictionaries. Each dictionary contains the following fields:
@@ -801,14 +803,16 @@ class Events:
                     incident['description'] = incident_description
                 if 'events' in field_list:
                     incident['events'] = [
-                        {"event": cls.syslog(count=1, timestamp=timestamp, observables=observables)[0]},
-                        {"event": cls.cef(count=1, timestamp=timestamp, vendor=vendor, product=product,
-                                          version=version, observables=observables)[0]},
+                        {"event": cls.syslog(count=1, timestamp=timestamp, observables=observables,
+                                             required_fields=required_fields)[0]},
+                        {"event": cls.cef(count=1, timestamp=timestamp, vendor=vendor, product=product, version=version
+                                          , observables=observables, required_fields=required_fields)[0]},
                         {"event": cls.leef(count=1, timestamp=timestamp, vendor=vendor, product=product,
-                                           version=version, observables=observables)[0]},
+                                           version=version, observables=observables, required_fields=required_fields)[0]},
                         {"event": cls.winevent(count=1, timestamp=timestamp, observables=observables)[0]},
                         {"event": cls.json(count=1, timestamp=timestamp, vendor=vendor, product=product,
-                                           version=version, observables=observables)[0]}
+                                           version=version, observables=observables,
+                                           required_fields=required_fields)[0]}
                     ]
             else:
                 incident = {
