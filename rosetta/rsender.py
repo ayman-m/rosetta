@@ -55,11 +55,13 @@ class Sender:
                 None.
     """
 
-    def __init__(self, data_type: str, destination: str,
+    def __init__(self, data_type: str, destination: str, headers: Optional[dict] = None,
                  worker_name: Optional[str] = 'worker_'+str(datetime.now()), count: Optional[int] = 1,
                  interval: Optional[int] = 1, vendor: Optional[str] = None, product: Optional[str] = None,
-                 version: Optional[str] = None, observables: Optional[Observables] = None, fields: Optional[str] = None,
-                 verify_ssl: Optional[bool] = None, datetime_obj: Optional[datetime] = None):
+                 version: Optional[str] = None, required_fields: Optional[str] = None,
+                 observables: Optional[Observables] = None, fields: Optional[str] = None,
+                 verify_ssl: Optional[bool] = None, datetime_obj: Optional[datetime] = None,
+                 data_json: Optional[dict] = None, data_text: Optional[str] = None):
         """
         Constructor for DataSenderWorker class.
 
@@ -77,12 +79,21 @@ class Sender:
         :param vendor: Optional. The vendor.
         :param product: Optional. The product.
         :param version: Optional. The version.
-        :param observables: Observables, list of observables.
-        :param fields: str, comma-separated list of fields to include in incident data.
-        :param verify_ssl: bool, handling ssl verification errors.
+        :param required_fields: Optional. A list of fields that are required to present in the generated data, whether
+         from observables or randomely.
+        :param observables: Optional. Observables, list of observables.
+        :param fields: Optional. comma-separated list of fields to include in incident data.
+        :param verify_ssl: Optional. handling ssl verification errors.
+        :param datetime_obj: Optional. time to start from.
+        :param data_json: Optional. JSON data to send.
+        :param data_text: Optional. Text data to send.
 
         :return: None
         """
+        if headers is None:
+            self.headers = {}
+        else:
+            self.headers = headers
         self.thread = None
         self.worker_name = worker_name
         self.data_type = data_type
@@ -91,6 +102,7 @@ class Sender:
         self.vendor = vendor
         self.product = product
         self.version = version
+        self.required_fields = required_fields
         self.destination = destination
         self.created_at = datetime.now()
         self.status = "Stopped"
@@ -98,6 +110,8 @@ class Sender:
         self.fields = fields
         self.verify_ssl = verify_ssl
         self.datetime_obj = datetime_obj
+        self.data_json = data_json
+        self.data_text = data_text
 
     def start(self) -> str:
         """
@@ -137,16 +151,21 @@ class Sender:
             try:
                 self.count -= 1
                 if self.data_type in ["SYSLOG", "CEF", "LEEF"]:
-                    if self.data_type == "SYSLOG":
-                        fake_message = Events.syslog(count=1, timestamp=self.datetime_obj, observables=self.observables)
-                    if self.data_type == "CEF":
-                        fake_message = Events.cef(count=1, timestamp=self.datetime_obj, vendor=self.vendor,
-                                                  product=self.product, version=self.version,
-                                                  observables=self.observables)
-                    if self.data_type == "LEEF":
-                        fake_message = Events.leef(count=1, timestamp=self.datetime_obj, vendor=self.vendor,
-                                                   product=self.product, version=self.version,
-                                                   observables=self.observables)
+                    if self.data_text:
+                        fake_message = [self.data_text]
+                    else:
+                        if self.data_type == "SYSLOG":
+                            fake_message = Events.syslog(count=1, datetime_iso=self.datetime_obj,
+                                                         observables=self.observables, required_fields=self.required_fields)
+                        if self.data_type == "CEF":
+                            fake_message = Events.cef(count=1, datetime_iso=self.datetime_obj, vendor=self.vendor,
+                                                      product=self.product, version=self.version,
+                                                      required_fields=self.required_fields, observables=self.observables)
+                        if self.data_type == "LEEF":
+                            fake_message = Events.leef(count=1, datetime_iso=self.datetime_obj, vendor=self.vendor,
+                                                       product=self.product, version=self.version,
+                                                       required_fields=self.required_fields,
+                                                       observables=self.observables)
                     ip_address = self.destination.split(':')[1]
                     port = self.destination.split(':')[2]
                     if 'tcp' in self.destination:
@@ -162,20 +181,29 @@ class Sender:
                         print(f"Worker: {self.worker_name} sending log message to {ip_address} ")
                         sock.sendto(fake_message[0].encode(), (ip_address, int(port)))
                 elif self.data_type in ["JSON", "INCIDENT"]:
-                    if self.data_type == "JSON":
-                        fake_message = Events.json(count=1, timestamp=self.datetime_obj, observables=self.observables)
-                    if self.data_type == "INCIDENT":
-                        fake_message = [{
-                            "alert": Events.incidents(count=1, observables=self.observables, vendor=self.vendor,
-                                                      version=self.version, product=self.product, fields=self.fields)
-                        }]
+                    if self.data_json:
+                        fake_message = [self.data_json]
+                    else:
+                        if self.data_type == "JSON":
+                            fake_message = Events.json(count=1, datetime_iso=self.datetime_obj,
+                                                       observables=self.observables, vendor=self.vendor,
+                                                       product=self.product, version=self.version,
+                                                       required_fields=self.required_fields,)
+                        if self.data_type == "INCIDENT":
+                            fake_message = [{
+                                "alert": Events.incidents(count=1, observables=self.observables, vendor=self.vendor,
+                                                          version=self.version, product=self.product,
+                                                          datetime_iso=self.datetime_obj,
+                                                          required_fields=self.required_fields, fields=self.fields)
+                            }]
                     if '://' not in self.destination:
                         url = 'http://' + self.destination
                     else:
                         url = self.destination
                     warnings.filterwarnings("ignore", category=InsecureRequestWarning)
                     print(f"Worker: {self.worker_name} sending log message to {url} ")
-                    response = requests.post(url, json=fake_message[0], timeout=(2, 5), verify=self.verify_ssl)
+                    response = requests.post(url, json=fake_message[0], timeout=(2, 5), headers=self.headers,
+                                             verify=self.verify_ssl)
                     response.raise_for_status()
             except (ConnectionRefusedError, socket.timeout, requests.exceptions.RequestException) as e:
                 print(f"Connection error: {e}")
