@@ -428,6 +428,9 @@ class Events:
             field_value = random.randint(1, 5)
         if field == "log_id":
             field_value = faker.uuid4()
+        if field == "alert_name":
+            field_value = observables.alert_name if observables and observables.alert_name \
+                else faker.sentence(nb_words=4)
         return field_value
 
     @classmethod
