@@ -434,14 +434,14 @@ class Events:
         return field_value
 
     @classmethod
-    def syslog(cls, count: int, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None,
+    def syslog(cls, count: int, datetime_iso: Optional[datetime] = None, observables: Optional[Observables] = None,
                required_fields: Optional[str] = None) -> List[str]:
         """
         Generate fake syslog messages.
 
         Args:
             count: The number of syslog messages to generate.
-            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
+            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during
             the past hour from now will be used.
             observables: Optional. An observables object. If not provided, random objservable will be generated
             and used.
@@ -461,14 +461,14 @@ class Events:
         """
         syslog_messages = []
         faker = cls._create_faker()
-        if timestamp is None:
-            timestamp = datetime.now() - timedelta(hours=1)
-            timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
+        if datetime_iso is None:
+            datetime_iso = datetime.now() - timedelta(hours=1)
+            datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
         if not required_fields:
             required_fields = "pid,host,user,unix_process,unix_cmd"
         for i in range(count):
-            timestamp += timedelta(seconds=1)
-            syslog_message = f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+            datetime_iso += timedelta(seconds=1)
+            syslog_message = f"{datetime_iso.strftime('%Y-%m-%d %H:%M:%S')}"
             for field in required_fields.split(","):
                 syslog_message += f" {cls.set_field(field, observables)}"
             if observables:
@@ -480,14 +480,14 @@ class Events:
 
     @classmethod
     def cef(cls, count: int, vendor: Optional[str] = None, product: Optional[str] = None,
-            version: Optional[str] = None, timestamp: Optional[datetime] = None,
+            version: Optional[str] = None, datetime_iso: Optional[datetime] = None,
             observables: Optional[Observables] = None, required_fields: Optional[str] = None) -> List[str]:
         """
         Generates fake CEF (Common Event Format) messages.
 
         Args:
             count: The number of CEF messages to generate.
-            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during.
+            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during.
             vendor: Optional. The vendor.
             product: Optional. The product value options include:
             - Firewall
@@ -519,9 +519,9 @@ class Events:
         faker = cls._create_faker()
         vendor = vendor or faker.company()
         version = version or faker.numerify("1.0.#")
-        if timestamp is None:
-            timestamp = datetime.now() - timedelta(hours=1)
-            timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
+        if datetime_iso is None:
+            datetime_iso = datetime.now() - timedelta(hours=1)
+            datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
         if not required_fields:
             if product == "Firewall":
                 required_fields = "local_ip,local_port,remote_ip,remote_port,dst_url,inbound_bytes," \
@@ -532,8 +532,8 @@ class Events:
             else:
                 required_fields = "local_ip,local_port,remote_ip,remote_port,protocol,rule_id,action"
         for i in range(count):
-            timestamp += timedelta(seconds=1)
-            cef_message = f"CEF:0|{vendor}|{product}|{version}|{cls.set_field('log_id', observables)}|{timestamp}" \
+            datetime_iso += timedelta(seconds=1)
+            cef_message = f"CEF:0|{vendor}|{product}|{version}|{cls.set_field('log_id', observables)}|{datetime_iso}" \
                           f"|{cls.set_field('severity', observables)}|"
             for field in required_fields.split(","):
                 cef_message += f" {field}={cls.set_field(field, observables)}"
@@ -545,7 +545,7 @@ class Events:
         return cef_messages
 
     @classmethod
-    def leef(cls, count, timestamp: Optional[datetime] = None, vendor: Optional[str] = None,
+    def leef(cls, count, datetime_iso: Optional[datetime] = None, vendor: Optional[str] = None,
              product: Optional[str] = None, version: Optional[str] = None,
              observables: Optional[Observables] = None, required_fields: Optional[str] = None) -> List[str]:
         """
@@ -553,7 +553,7 @@ class Events:
 
         Parameters:
             count (int): The number of LEEF messages to generate.
-            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during.
+            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during.
             vendor: Optional. The vendor.
             product: Optional. The product.
             version: Optional. The version.
@@ -583,9 +583,9 @@ class Events:
         faker = cls._create_faker()
         vendor = vendor or faker.company()
         version = version or faker.numerify("1.0.#")
-        if timestamp is None:
-            timestamp = datetime.now() - timedelta(hours=1)
-            timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
+        if datetime_iso is None:
+            datetime_iso = datetime.now() - timedelta(hours=1)
+            datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
         if not required_fields:
             if product == "WAF":
                 required_fields = "local_ip,local_port,host,method,url,protocol," \
@@ -593,8 +593,8 @@ class Events:
             else:
                 required_fields = "local_ip,local_port,host,url,protocol,response_code,action"
         for i in range(count):
-            timestamp += timedelta(seconds=1)
-            leef_message = f"LEEF:1.0|{vendor}|{product}|{version}|deviceEventDate={timestamp}|" \
+            datetime_iso += timedelta(seconds=1)
+            leef_message = f"LEEF:1.0|{vendor}|{product}|{version}|deviceEventDate={datetime_iso}|" \
                            f"severity={cls.set_field('severity', observables)}|"
             for field in required_fields.split(","):
                 leef_message += f" {field}={cls.set_field(field, observables)}"
@@ -606,14 +606,14 @@ class Events:
         return leef_messages
 
     @classmethod
-    def winevent(cls, count, timestamp: Optional[datetime] = None, observables: Optional[Observables] = None) -> \
+    def winevent(cls, count, datetime_iso: Optional[datetime] = None, observables: Optional[Observables] = None) -> \
             List[str]:
         """
         Generates fake Windows Event Log messages.
 
         Args:
             count (int): The number of fake messages to generate.
-            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
+            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during
             observables: An observables object. If not provided, random objservable will be generated and used.
 
         Returns:
@@ -625,15 +625,15 @@ class Events:
         """
         winevent_messages = []
         faker = cls._create_faker()
-        if timestamp is None:
-            timestamp = datetime.now() - timedelta(hours=1)
-            timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
+        if datetime_iso is None:
+            datetime_iso = datetime.now() - timedelta(hours=1)
+            datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
         for i in range(count):
-            timestamp += timedelta(seconds=1)
+            datetime_iso += timedelta(seconds=1)
             guid = faker.uuid4()
             local_port = faker.random_int(min=1024, max=65535)
             transmitted_services = faker.sentence(nb_words=5)
-            system_time = timestamp
+            system_time = datetime_iso
             process_id = faker.random_int()
             new_process_id = faker.random_int()
             thread_id = faker.random_int()
@@ -671,7 +671,7 @@ class Events:
         return winevent_messages
 
     @classmethod
-    def json(cls, count, timestamp: Optional[datetime] = None, vendor: Optional[str] = None,
+    def json(cls, count, datetime_iso: Optional[datetime] = None, vendor: Optional[str] = None,
              product: Optional[str] = None, version: Optional[str] = None, observables: Optional[Observables] = None,
              required_fields: Optional[str] = None) -> List[dict]:
         """
@@ -679,7 +679,7 @@ class Events:
 
         Args:
             count (int): The number of JSON messages to generate.
-            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during.
+            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during.
             vendor: Optional. The vendor.
             product: Optional. The product value options include:
             - VulnScanner
@@ -702,21 +702,21 @@ class Events:
         faker = cls._create_faker()
         vendor = vendor or faker.company()
         version = version or faker.numerify("1.0.#")
-        if timestamp is None:
-            timestamp = datetime.now() - timedelta(hours=1)
-            timestamp += timedelta(seconds=faker.random_int(min=0, max=3599))
+        if datetime_iso is None:
+            datetime_iso = datetime.now() - timedelta(hours=1)
+            datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
         if not required_fields:
             if product == "VulnScanner":
                 required_fields = "cve_id,host,file_hash"
             else:
                 required_fields = "user,host"
         for i in range(count):
-            timestamp += timedelta(seconds=1)
+            datetime_iso += timedelta(seconds=1)
             event = {
                 'vendor': vendor,
                 'product': product,
                 'version': version,
-                'timestamp': str(timestamp),
+                'datetime_iso': str(datetime_iso),
                 'severity': cls.set_field("severity", observables)
             }
             for field in required_fields.split(","):
@@ -729,7 +729,7 @@ class Events:
         return json_messages
 
     @classmethod
-    def incidents(cls, count, fields: Optional[str] = None, timestamp: Optional[datetime] = None,
+    def incidents(cls, count, fields: Optional[str] = None, datetime_iso: Optional[datetime] = None,
                   vendor: Optional[str] = None, product: Optional[str] = None, version: Optional[str] = None,
                   observables: Optional[Observables] = None, required_fields: Optional[str] = None) -> List[dict]:
         """
@@ -743,7 +743,7 @@ class Events:
             vendor: Optional. The vendor.
             product: Optional. The product.
             version: Optional. The version.
-            timestamp: Optional. The starting timestamp for the syslog messages. If not provided, a random time during
+            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during
             observables: An observables object. If not provided, random objservable will be generated and used.
             required_fields: Optional. A list of fields that are required to present in the generated data, whether from
             observables or randomely.
@@ -816,14 +816,14 @@ class Events:
                     incident['description'] = incident_description
                 if 'events' in field_list:
                     incident['events'] = [
-                        {"event": cls.syslog(count=1, timestamp=timestamp, observables=observables,
+                        {"event": cls.syslog(count=1, datetime_iso=datetime_iso, observables=observables,
                                              required_fields=required_fields)[0]},
-                        {"event": cls.cef(count=1, timestamp=timestamp, vendor=vendor, product=product, version=version
+                        {"event": cls.cef(count=1, datetime_iso=datetime_iso, vendor=vendor, product=product, version=version
                                           , observables=observables, required_fields=required_fields)[0]},
-                        {"event": cls.leef(count=1, timestamp=timestamp, vendor=vendor, product=product,
+                        {"event": cls.leef(count=1, datetime_iso=datetime_iso, vendor=vendor, product=product,
                                            version=version, observables=observables, required_fields=required_fields)[0]},
-                        {"event": cls.winevent(count=1, timestamp=timestamp, observables=observables)[0]},
-                        {"event": cls.json(count=1, timestamp=timestamp, vendor=vendor, product=product,
+                        {"event": cls.winevent(count=1, datetime_iso=datetime_iso, observables=observables)[0]},
+                        {"event": cls.json(count=1, datetime_iso=datetime_iso, vendor=vendor, product=product,
                                            version=version, observables=observables,
                                            required_fields=required_fields)[0]}
                     ]
