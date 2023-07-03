@@ -312,7 +312,7 @@ class Events:
             field_value = faker.random_int(min=1024, max=65535)
         if field == "remote_ip":
             field_value = random.choice(observables.remote_ip) if observables and observables.remote_ip \
-                    else Observables.generator(observable_type=ObservableType.IP, known=ObservableKnown.BAD, count=1)
+                    else Observables.generator(observable_type=ObservableType.IP, known=ObservableKnown.BAD, count=1)[0]
         if field == "remote_port":
             field_value = random.choice(observables.remote_port) if observables and observables.remote_port \
                     else faker.random_int(min=1024, max=65535)
