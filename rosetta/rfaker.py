@@ -419,17 +419,17 @@ class Events:
                     else Observables.generator(observable_type=ObservableType.SHA256, known=ObservableKnown.BAD,
                                                count=1)
         if field == "incident_types":
-            field_value = observables.incident_types if observables and observables.incident_types \
+            field_value = random.choice(observables.incident_types) if observables and observables.incident_types \
                 else INCIDENTS_TYPES
         if field == "analysts":
-            field_value = observables.analysts if observables and observables.analysts \
+            field_value = random.choice(observables.analysts) if observables and observables.analysts \
                 else [faker.unique.first_name() for _ in range(10)]
         if field == "duration":
             field_value = random.randint(1, 5)
         if field == "log_id":
             field_value = faker.uuid4()
         if field == "alert_name":
-            field_value = observables.alert_name if observables and observables.alert_name \
+            field_value = random.choice(observables.alert_name) if observables and observables.alert_name \
                 else faker.sentence(nb_words=4)
         return field_value
 
