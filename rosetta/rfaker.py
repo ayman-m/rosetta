@@ -716,6 +716,7 @@ class Events:
                 'vendor': vendor,
                 'product': product,
                 'version': version,
+                'timestamp': timestamp,
                 'severity': cls.set_field("severity", observables)
             }
             for field in required_fields.split(","):
