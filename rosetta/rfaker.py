@@ -305,7 +305,7 @@ class Events:
                 else random.choice(UNIX_CMD)
         if field == "severity":
             field_value = random.choice(observables.severity) if observables and observables.severity \
-                else faker.choice(SEVERITIES)
+                else random.choice(SEVERITIES)
         if field == "local_ip":
             field_value = random.choice(observables.local_ip) if observables and observables.local_ip \
                     else faker.ipv4()
