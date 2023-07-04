@@ -98,8 +98,3 @@ WIN_EVENTS = [
     '<Data Name="TokenElevationType">TokenElevationTypeLimited (3)</Data>'
     '<Data Name="ProcessCommandLine">{cmd}</Data>'
 ]
-
-INCIDENTS_TYPES = [
-    'Malware', 'Phishing', 'Access Violation', 'Lateral Movement', 'Port Scan', 'Sql Injection', 'Brute Force',
-    'Control Avoidance', 'Rogue Device', 'Denial Of Service', 'Account Compromised'
-]

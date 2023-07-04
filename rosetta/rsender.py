@@ -106,6 +106,7 @@ class Sender:
         self.destination = destination
         self.created_at = datetime.now()
         self.status = "Stopped"
+        self.response = None
         self.observables = observables
         self.fields = fields
         self.verify_ssl = verify_ssl
@@ -204,6 +205,7 @@ class Sender:
                     print(f"Worker: {self.worker_name} sending log message to {url} ")
                     response = requests.post(url, json=fake_message[0], timeout=(2, 5), headers=self.headers,
                                              verify=self.verify_ssl)
+                    self.response = response.text
                     response.raise_for_status()
             except (ConnectionRefusedError, socket.timeout, requests.exceptions.RequestException) as e:
                 print(f"Connection error: {e}")
