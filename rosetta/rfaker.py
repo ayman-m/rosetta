@@ -41,7 +41,8 @@ class Observables:
                  outbound_bytes: Optional[list] = None, app: Optional[list] = None, os: Optional[list] = None,
                  user: Optional[list] = None, cve: Optional[list] = None, file_name: Optional[list] = None,
                  file_hash: Optional[list] = None, win_cmd: Optional[list] = None, unix_cmd: Optional[list] = None,
-                 win_process: Optional[list] = None, unix_process: Optional[list] = None,
+                 win_process: Optional[list] = None, win_child_process: Optional[list] = None,
+                 unix_process: Optional[list] = None, unix_child_process: Optional[list] = None,
                  technique: Optional[list] = None, entry_type: Optional[list] = None, severity: Optional[list] = None,
                  sensor: Optional[list] = None, action: Optional[list] = None, event_id: Optional[list] = None,
                  error_code: Optional[list] = None, terms: Optional[list] = None, alert_types: Optional[list] = None,
@@ -74,7 +75,9 @@ class Observables:
         self.win_cmd = win_cmd
         self.unix_cmd = unix_cmd
         self.win_process = win_process
+        self.win_child_process = win_child_process
         self.unix_process = unix_process
+        self.unix_child_process = unix_child_process
         self.technique = technique
         self.entry_type = entry_type
         self.severity = severity
@@ -300,6 +303,9 @@ class Events:
         if field == "unix_process":
             field_value = random.choice(observables.unix_process) if observables and observables.unix_process \
                 else "sudo"
+        if field == "unix_child_process":
+            field_value = random.choice(observables.unix_child_process) if observables and \
+                                                                           observables.unix_child_process else "sudo"
         if field == "unix_cmd":
             field_value = random.choice(observables.unix_cmd) if observables and observables.unix_cmd \
                 else random.choice(UNIX_CMD)
@@ -406,6 +412,9 @@ class Events:
         if field == "win_cmd":
             field_value = random.choice(observables.win_cmd) if observables and observables.win_cmd \
                 else random.choice(WINDOWS_CMD)
+        if field == "win_child_process":
+            field_value = random.choice(observables.win_child_process) if \
+                observables and observables.win_child_process else random.choice(WIN_PROCESSES)
         if field == "source_network_address":
             field_value = random.choice(observables.local_ip) if observables and observables.local_ip \
                 else faker.ipv4_private()
