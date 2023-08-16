@@ -294,7 +294,7 @@ class Events:
         faker = cls._create_faker()
         if field == "pid":
             field_value = faker.random_int(min=1000, max=65535)
-        if field == "host":
+        if field == "src_host":
             field_value = random.choice(observables.src_host) if observables and observables.src_host \
                 else faker.hostname()
         if field == "user":
@@ -611,7 +611,7 @@ class Events:
             if observables:
                 for observable, observable_value in vars(observables).items():
                     if observable_value and observable not in required_fields.split(","):
-                        leef_message += f" {observable}={random.choice(observable_value)}"
+                        leef_message += f"{observable}={random.choice(observable_value)}|"
             leef_messages.append(leef_message)
         return leef_messages
 
