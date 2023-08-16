@@ -605,14 +605,14 @@ class Events:
                 required_fields = "local_ip,local_port,host,url,protocol,response_code,action"
         for i in range(count):
             datetime_iso += timedelta(seconds=1)
-            leef_message = f"LEEF:1.0|{vendor}|{product}|{version}|{event_id}|;|" \
-                           f"severity={cls.set_field('severity', observables)};devtime={datetime_iso}"
+            leef_message = f"LEEF:1.0|{vendor}|{product}|{version}|{event_id}|" \
+                           f"severity={cls.set_field('severity', observables)}  devtime={datetime_iso}"
             for field in required_fields.split(","):
-                leef_message += f";{field}={cls.set_field(field, observables)}"
+                leef_message += f"  {field}={cls.set_field(field, observables)}"
             if observables:
                 for observable, observable_value in vars(observables).items():
                     if observable_value and observable not in required_fields.split(","):
-                        leef_message += f";{observable}={random.choice(observable_value)}"
+                        leef_message += f"  {observable}={random.choice(observable_value)}"
             leef_messages.append(leef_message)
         return leef_messages
 
