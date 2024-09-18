@@ -1,4 +1,4 @@
 Faker==18.5.1
 Requests==2.31.0
-setuptools==67.7.2
+setuptools==70.0.0
 urllib3==1.26.15
