@@ -15,6 +15,7 @@ from rosetta.constants.sources import BAD_IP_SOURCES, GOOD_IP_SOURCES, BAD_URL_S
 from rosetta.constants.systems import UNIX_CMD, WINDOWS_CMD, WIN_PROCESSES, WIN_EVENTS
 from rosetta.constants.attributes import INCIDENTS_TYPES, SEVERITIES
 from rosetta.constants.sensors import ACTIONS, PROTOCOLS, TECHNIQUES, ERROR_CODE
+from rosetta.constants.db import QUERY_TYPE, DATABASE_NAME, QUERY
 
 
 class ObservableType(Enum):
@@ -32,22 +33,23 @@ class ObservableKnown(Enum):
 
 class Observables:
     def __init__(self, local_ip: list = None, remote_ip: Optional[list] = None, local_ip_v6: list = None,
-                 remote_ip_v6: Optional[list] = None, src_host: Optional[list] = None,
-                 dst_host: Optional[list] = None, src_domain: Optional[list] = None, dst_domain: Optional[list] = None,
-                 sender_email: Optional[list] = None, recipient_email: Optional[list] = None,
-                 email_subject: Optional[list] = None, email_body: Optional[list] = None,
-                 url: Optional[list] = None, source_port: Optional[list] = None, remote_port: Optional[list] = None,
-                 protocol: Optional[list] = None, inbound_bytes: Optional[list] = None,
-                 outbound_bytes: Optional[list] = None, app: Optional[list] = None, os: Optional[list] = None,
-                 user: Optional[list] = None, cve: Optional[list] = None, file_name: Optional[list] = None,
-                 file_hash: Optional[list] = None, win_cmd: Optional[list] = None, unix_cmd: Optional[list] = None,
-                 win_process: Optional[list] = None, win_child_process: Optional[list] = None,
-                 unix_process: Optional[list] = None, unix_child_process: Optional[list] = None,
-                 technique: Optional[list] = None, entry_type: Optional[list] = None, severity: Optional[list] = None,
-                 sensor: Optional[list] = None, action: Optional[list] = None, event_id: Optional[list] = None,
-                 error_code: Optional[list] = None, terms: Optional[list] = None, alert_types: Optional[list] = None,
-                 alert_name: Optional[list] = None, incident_types: Optional[list] = None,
-                 analysts: Optional[list] = None, action_status: Optional[list] = None):
+                remote_ip_v6: Optional[list] = None, src_host: Optional[list] = None,
+                dst_host: Optional[list] = None, src_domain: Optional[list] = None, dst_domain: Optional[list] = None,
+                sender_email: Optional[list] = None, recipient_email: Optional[list] = None,
+                email_subject: Optional[list] = None, email_body: Optional[list] = None,
+                url: Optional[list] = None, source_port: Optional[list] = None, remote_port: Optional[list] = None,
+                protocol: Optional[list] = None, inbound_bytes: Optional[list] = None,
+                outbound_bytes: Optional[list] = None, app: Optional[list] = None, os: Optional[list] = None,
+                user: Optional[list] = None, cve: Optional[list] = None, file_name: Optional[list] = None,
+                file_hash: Optional[list] = None, win_cmd: Optional[list] = None, unix_cmd: Optional[list] = None,
+                win_process: Optional[list] = None, win_child_process: Optional[list] = None,
+                unix_process: Optional[list] = None, unix_child_process: Optional[list] = None,
+                technique: Optional[list] = None, entry_type: Optional[list] = None, severity: Optional[list] = None,
+                sensor: Optional[list] = None, action: Optional[list] = None, event_id: Optional[list] = None,
+                error_code: Optional[list] = None, terms: Optional[list] = None, alert_types: Optional[list] = None,
+                alert_name: Optional[list] = None, incident_types: Optional[list] = None,
+                analysts: Optional[list] = None, action_status: Optional[list] = None, query_type: Optional[list] = None,
+                database_name: Optional[list] = None, query: Optional[list] = None):
         self.local_ip = local_ip
         self.remote_ip = remote_ip
         self.local_ip_v6 = local_ip_v6
@@ -91,7 +93,9 @@ class Observables:
         self.alert_types = alert_types
         self.alert_name = alert_name
         self.action_status = action_status
-
+        self.query_type = query_type
+        self.database_name = database_name
+        self.query = query
     @staticmethod
     def _get_observables_from_source(source: dict) -> list:
         """
@@ -99,7 +103,7 @@ class Observables:
 
         Args:
         - source: A dictionary containing information about the source, including its type, URL, structure, and value
-                  column or key.
+                column or key.
 
         Returns:
         - A list of observables fetched from the source.
@@ -116,13 +120,13 @@ class Observables:
             results = [line.strip() for line in response.text.strip().split("\n") if not line.startswith("#")]
         elif source['structure'] == 'csv':
             rows = csv.reader(filter(lambda line: not line.startswith('#'), response.text.strip().split('\n')),
-                              delimiter=source['delimiter'])
+                            delimiter=source['delimiter'])
             for row in rows:
                 results.append(row[source['value_column']])
         elif source['structure'] == 'json':
             results = reduce(lambda d, key: d[key] if key != source['value_key'].split('.')[-1] else [i[key]
-                                                                                                      for i in d],
-                             source['value_key'].split('.'), response.json())
+                                                                                                    for i in d],
+                            source['value_key'].split('.'), response.json())
         random.shuffle(results)
         if source_type == 'subnet':
             ip_addresses = []
@@ -144,7 +148,7 @@ class Observables:
 
     @classmethod
     def generator(cls, count: int, observable_type: ObservableType,
-                  known: ObservableKnown = ObservableKnown.BAD) -> List[str]:
+                known: ObservableKnown = ObservableKnown.BAD) -> List[str]:
         """
         Generates a list of observable values based on the given observable type and known status, with a desired count.
         The function attempts to obtain the values from sources defined in configuration files. If the function fails to
@@ -297,6 +301,9 @@ class Events:
         if field == "src_host":
             field_value = random.choice(observables.src_host) if observables and observables.src_host \
                 else faker.hostname()
+        if field == "dst_host":
+            field_value = random.choice(observables.dst_host) if observables and observables.dst_host \
+                else faker.hostname()
         if field == "user":
             field_value = random.choice(observables.user) if observables and observables.user \
                 else faker.user_name()
@@ -305,7 +312,7 @@ class Events:
                 else "sudo"
         if field == "unix_child_process":
             field_value = random.choice(observables.unix_child_process) if observables and \
-                                                                           observables.unix_child_process else "sudo"
+                                                                        observables.unix_child_process else "sudo"
         if field == "unix_cmd":
             field_value = random.choice(observables.unix_cmd) if observables and observables.unix_cmd \
                 else random.choice(UNIX_CMD)
@@ -359,7 +366,7 @@ class Events:
         if field == "attachment_hash":
             field_value = random.choice(observables.file_hash) if observables and observables.file_hash \
                     else Observables.generator(observable_type=ObservableType.SHA256, known=ObservableKnown.BAD,
-                                               count=1)
+                                            count=1)
         if field == "spam_score":
             field_value = faker.random_int(min=1, max=5)
         if field == "method":
@@ -427,7 +434,7 @@ class Events:
         if field == "file_hash":
             field_value = random.choice(observables.file_hash) if observables and observables.file_hash \
                     else Observables.generator(observable_type=ObservableType.SHA256, known=ObservableKnown.BAD,
-                                               count=1)
+                                            count=1)
         if field == "incident_types":
             field_value = random.choice(observables.incident_types) if observables and observables.incident_types \
                 else INCIDENTS_TYPES
@@ -441,6 +448,15 @@ class Events:
         if field == "alert_name":
             field_value = random.choice(observables.alert_name) if observables and observables.alert_name \
                 else faker.sentence(nb_words=4)
+        if field == "query_type":
+            field_value = random.choice(observables.query_type) if \
+                observables and observables.query_type else random.choice(QUERY_TYPE)
+        if field == "database_name":
+            field_value = random.choice(observables.database_name) if \
+                observables and observables.database_name else random.choice(DATABASE_NAME)
+        if field == "query":
+            field_value = random.choice(observables.query) if \
+                observables and observables.query else random.choice(QUERY) 
         return field_value
 
     @classmethod

@@ -41,3 +41,6 @@ analysts
 alert_types
 alert_name
 action_status
+query_type
+database_name
+query
