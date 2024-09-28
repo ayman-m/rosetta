@@ -319,6 +319,27 @@ class Events:
         if field == "technique":
             field_value = random.choice(observables.technique) if observables and observables.technique \
                 else random.choice(ATTACK_TECHNIQUES)
+        if field == "entry_type":
+            field_value = random.choice(observables.entry_type) if observables and observables.entry_type \
+                else faker.sentence(nb_words=2)
+        if field == "sensor":
+            field_value = random.choice(observables.sensor) if observables and observables.sensor \
+                else faker.sentence(nb_words=1)
+        if field == "event_id":
+            field_value = random.choice(observables.event_id) if observables and observables.event_id \
+                else faker.random_int(min=10, max=1073741824)       
+        if field == "error_code":
+            field_value = random.choice(observables.error_code) if observables and observables.error_code \
+                else faker.random_int(min=1000, max=5000)  
+        if field == "terms":
+            field_value = random.choice(observables.terms) if observables and observables.terms \
+                else faker.sentence(nb_words=10)
+        if field == "alert_types":
+            field_value = random.choice(observables.alert_types) if observables and observables.alert_types \
+                else faker.sentence(nb_words=1)
+        if field == "action_status":
+            field_value = random.choice(observables.action_status) if observables and observables.action_status \
+                else random.choice(ACTIONS)
         if field == "severity":
             field_value = random.choice(observables.severity) if observables and observables.severity \
                 else random.choice(SEVERITIES)
