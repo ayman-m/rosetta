@@ -11,7 +11,7 @@ recipient_email
 email_subject
 email_body
 url
-source_port
+local_port
 remote_port
 protocol
 inbound_bytes
