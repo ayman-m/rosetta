@@ -401,7 +401,16 @@ class Events:
         required_fields: Optional[str] = None
     ) -> List[str]:
         """
-        Generate fake syslog messages with optimizations for efficiency.
+        Generate fake syslog messages with per-message randomization.
+
+        Args:
+            count (int): Number of syslog messages to generate.
+            datetime_iso (Optional[datetime]): Starting datetime for the messages.
+            observables (Optional[Observables]): Observables object with predefined values.
+            required_fields (Optional[str]): Comma-separated string of required fields.
+
+        Returns:
+            List[str]: A list of generated syslog messages.
         """
         syslog_messages = []
         faker = Events.faker
@@ -416,43 +425,41 @@ class Events:
             "pid", "host", "user", "unix_process", "unix_cmd"
         ]
 
-        # Precompute static values for required fields
-        common_fields = {}
-        for field in required_fields_list:
-            value = None
-            if observables and hasattr(observables, field):
-                obs_value = getattr(observables, field)
-                if obs_value:
-                    if isinstance(obs_value, list):
-                        value = random.choice(obs_value)
-                    else:
-                        value = obs_value
-            if value is None:
-                value = Events._set_field(field)
-            common_fields[field] = value
+        # Convert observables to a dictionary for easy access
+        observables_dict = vars(observables) if observables else {}
 
-        # Preprocess observables
-        extra_fields = []
-        if observables:
-            observables_dict = vars(observables)
-            for key, value in observables_dict.items():
-                if value and key not in required_fields_list:
-                    if isinstance(value, list):
-                        val = random.choice(value)
-                    else:
-                        val = value
-                    extra_fields.append(str(val))
+        # Precompute constant fields (if any)
+        # For syslog, most fields may vary per message, so we may not have many constants
+        constant_fields = {}
 
-        # Generate all syslog messages
+        # Generate syslog messages
         for i in range(count):
             # Update datetime for each log
             current_time = (datetime_iso + timedelta(seconds=i + 1)).strftime('%b %d %H:%M:%S')
 
-            # Build the syslog message efficiently
+            # Generate required fields per message
+            event_fields = {}
+            for field in required_fields_list:
+                value = None
+                if field in observables_dict and observables_dict[field]:
+                    obs_value = observables_dict[field]
+                    value = random.choice(obs_value) if isinstance(obs_value, list) else obs_value
+                else:
+                    value = Events._set_field(field)
+                event_fields[field] = value
+
+            # Generate extra fields per message
+            extra_fields = []
+            for key, value in observables_dict.items():
+                if value and key not in required_fields_list:
+                    val = random.choice(value) if isinstance(value, list) else value
+                    extra_fields.append(str(val))
+
+            # Build the syslog message
             syslog_message_parts = [f"{current_time}"]
 
             # Insert required fields
-            syslog_message_parts.extend(str(common_fields[field]) for field in required_fields_list)
+            syslog_message_parts.extend(str(event_fields[field]) for field in required_fields_list)
 
             # Append additional observables not in required fields
             syslog_message_parts.extend(extra_fields)
@@ -460,7 +467,7 @@ class Events:
             syslog_messages.append(" ".join(syslog_message_parts))
 
         return syslog_messages
-
+    
     @classmethod
     def cef(
         cls,
@@ -473,7 +480,7 @@ class Events:
         required_fields: Optional[str] = None
     ) -> List[str]:
         cef_messages = []
-        faker =  Events.faker
+        faker = Events.faker
         vendor = vendor or faker.company()
         product = product or faker.word()
         version = version or faker.numerify("1.0.#")
@@ -481,54 +488,47 @@ class Events:
         required_fields_list = required_fields.split(",") if required_fields else [
             "local_ip", "local_port", "remote_ip", "remote_port", "protocol", "rule_id", "action"
         ]
- 
-        common_fields = {}
-        for field in required_fields_list:
-            value = None
-            if observables and hasattr(observables, field):
-                obs_value = getattr(observables, field)
-                if obs_value:
-                    if isinstance(obs_value, list):
-                        value = random.choice(obs_value)
-                    else:
-                        value = obs_value
-            if value is None:
-                value = Events._set_field(field)
-            common_fields[field] = value
 
-        
-        # Preprocess observables
-        extra_fields_str = ""
-        if observables:
-            observables_dict = vars(observables)
-            extra_fields = [
-                f"{key}={random.choice(value)}"
-                for key, value in observables_dict.items()
-                if value and key not in required_fields_list
-            ]
-            if extra_fields:
-                extra_fields_str = " " + " ".join(extra_fields)
-        
-        # Pre-compile the CEF message template
-        cef_template = (
-            f"CEF:0|{vendor}|{product}|{version}|{{log_id}}|{{current_datetime}}|{{severity}}|"
-            + " ".join([f"{field}={common_fields[field]}" for field in required_fields_list])
-        )
-        
+        # Convert observables to a dictionary for easy access
+        observables_dict = vars(observables) if observables else {}
+
         # Generate events
         for i in range(count):
             current_datetime = datetime_iso + timedelta(seconds=i)
             log_id = faker.uuid4()
-            severity = common_fields.get('severity') or 'low'
-            
-            cef_message = cef_template.format(
-                log_id=log_id,
-                current_datetime=current_datetime.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
-                severity=severity
+            severity = 'low'  # Or generate per message if needed
+
+            # Generate field values per message
+            event_fields = {}
+            for field in required_fields_list:
+                value = None
+                if field in observables_dict and observables_dict[field]:
+                    obs_value = observables_dict[field]
+                    if isinstance(obs_value, list):
+                        value = random.choice(obs_value)
+                    else:
+                        value = obs_value
+                else:
+                    value = Events._set_field(field)
+                event_fields[field] = value
+
+            # Generate extra fields per message
+            extra_fields = []
+            for key, value in observables_dict.items():
+                if value and key not in required_fields_list:
+                    val = random.choice(value) if isinstance(value, list) else value
+                    extra_fields.append(f"{key}={val}")
+
+            extra_fields_str = " " + " ".join(extra_fields) if extra_fields else ""
+
+            # Build the CEF message
+            cef_message = (
+                f"CEF:0|{vendor}|{product}|{version}|{log_id}|{current_datetime.strftime('%Y-%m-%dT%H:%M:%S.%fZ')}|{severity}|"
+                + " ".join([f"{field}={event_fields[field]}" for field in required_fields_list])
             )
             cef_message += extra_fields_str
             cef_messages.append(cef_message)
-        
+
         return cef_messages
    
     @classmethod
@@ -543,10 +543,10 @@ class Events:
         required_fields: Optional[str] = None
     ) -> List[str]:
         """
-        Generates optimized fake LEEF (Log Event Extended Format) messages.
+        Generates optimized fake LEEF (Log Event Extended Format) messages with per-message randomization.
         """
         leef_messages = []
-        faker =  Events.faker
+        faker = Events.faker
         vendor = vendor or faker.company()
         product = product or faker.word()
         version = version or faker.numerify("1.0.#")
@@ -557,50 +557,56 @@ class Events:
             "local_ip", "local_port", "host", "url", "protocol", "response_code", "action"
         ]
 
-        # Precompute event_id and severity
-        event_id = faker.random_int(min=101, max=501)
-        severity = Events._set_field("severity")
+        # Convert observables to a dictionary for easy access
+        observables_dict = vars(observables) if observables else {}
 
-        # Precompute common fields
-        common_fields = {}
-        for field in required_fields_list:
-            value = None
-            if observables and hasattr(observables, field):
-                obs_value = getattr(observables, field)
-                if obs_value:
-                    if isinstance(obs_value, list):
-                        value = random.choice(obs_value)
-                    else:
-                        value = obs_value
-            if value is None:
-                value = Events._set_field(field)
-            common_fields[field] = value
-
-        # Preprocess extra observables
-        extra_fields = []
-        if observables:
-            observables_dict = vars(observables)
-            for key, value in observables_dict.items():
-                if value and key not in required_fields_list:
-                    val = random.choice(value) if isinstance(value, list) else value
-                    extra_fields.append(f"  {key}={val}")
-
-        # Pre-compile the LEEF message template
-        leef_template = (
-            f"LEEF:1.0|{vendor}|{product}|{version}|{event_id}|"
-            f"severity={severity}  devTime={{current_datetime}}"
-            + "".join(f"  {field}={common_fields[field]}" for field in required_fields_list)
-            + "".join(extra_fields)
-        )
+        # Precompute constant fields
+        # Event ID and severity might change per event; move inside the loop if needed
+        constant_fields = {
+            'vendor': vendor,
+            'product': product,
+            'version': version,
+        }
 
         # Generate messages
         for i in range(count):
             current_datetime = (datetime_iso + timedelta(seconds=i)).strftime('%b %d %H:%M:%S')
 
-            leef_message = leef_template.format(current_datetime=current_datetime)
+            # Generate per-message fields
+            # Event ID and severity could be variable
+            event_id = Events._set_field("event_id")
+            severity = Events._set_field("severity")
+
+            # Generate required fields per message
+            event_fields = {}
+            for field in required_fields_list:
+                value = None
+                if field in observables_dict and observables_dict[field]:
+                    obs_value = observables_dict[field]
+                    value = random.choice(obs_value) if isinstance(obs_value, list) else obs_value
+                else:
+                    value = Events._set_field(field)
+                event_fields[field] = value
+
+            # Generate extra fields per message
+            extra_fields = []
+            for key, value in observables_dict.items():
+                if value and key not in required_fields_list:
+                    val = random.choice(value) if isinstance(value, list) else value
+                    extra_fields.append(f"  {key}={val}")
+
+            # Build the LEEF message
+            leef_message = (
+                f"LEEF:1.0|{constant_fields['vendor']}|{constant_fields['product']}|{constant_fields['version']}|{event_id}|"
+                f"severity={severity}  devTime={current_datetime}"
+                + "".join(f"  {field}={event_fields[field]}" for field in required_fields_list)
+                + "".join(extra_fields)
+            )
+
             leef_messages.append(leef_message)
 
         return leef_messages
+
     
     @classmethod
     def winevent(
@@ -610,7 +616,7 @@ class Events:
         observables: Optional['Observables'] = None
     ) -> List[str]:
         """
-        Generates optimized fake Windows Event Log messages using set_field.
+        Generates fake Windows Event Log messages with per-message randomization.
 
         Args:
             count (int): The number of fake messages to generate.
@@ -649,26 +655,13 @@ class Events:
             "src_domain"
         ]
 
-        # Precompute common fields using set_field
-        common_fields = {}
-        for field in required_fields_list:
-            value = None
-            if observables and hasattr(observables, field):
-                obs_value = getattr(observables, field)
-                if obs_value:
-                    value = random.choice(obs_value) if isinstance(obs_value, list) else obs_value
-            if value is None:
-                value = Events._set_field(field)
-            common_fields[field] = value
+        # Convert observables to a dictionary for easy access
+        observables_dict = vars(observables) if observables else {}
 
-        # Preprocess extra observables not in required fields
-        extra_fields = {}
-        if observables:
-            observables_dict = vars(observables)
-            for key, value in observables_dict.items():
-                if value and key not in required_fields_list:
-                    val = random.choice(value) if isinstance(value, list) else value
-                    extra_fields[key] = val
+        # Precompute constant fields (if any)
+        constant_fields = {
+            # Add any fields that are constant across events
+        }
 
         # Generate events
         for i in range(count):
@@ -677,23 +670,46 @@ class Events:
             system_time = current_datetime.strftime('%Y-%m-%d %H:%M:%S')
 
             # Generate per-event fields
+            event_fields = {}
+
+            # Generate required fields per message
+            for field in required_fields_list:
+                value = None
+                if field in observables_dict and observables_dict[field]:
+                    obs_value = observables_dict[field]
+                    value = random.choice(obs_value) if isinstance(obs_value, list) else obs_value
+                else:
+                    value = Events._set_field(field)
+                event_fields[field] = value
+
+            # Generate extra fields per message
+            for key, value in observables_dict.items():
+                if value and key not in required_fields_list:
+                    val = random.choice(value) if isinstance(value, list) else value
+                    event_fields[key] = val
+
+            # Generate per-event fields that are not in observables
             guid = faker.uuid4()
 
             # Use event_id from observables if available
-            event_record_id = None
-            if observables and hasattr(observables, 'event_id') and observables.event_id:
-                event_record_id = random.choice(observables.event_id)
+            if 'event_id' in observables_dict and observables_dict['event_id']:
+                event_record_id = (
+                    random.choice(observables_dict['event_id'])
+                    if isinstance(observables_dict['event_id'], list)
+                    else observables_dict['event_id']
+                )
             else:
                 event_record_id = Events._set_field('event_id')
 
             # Prepare event fields
-            event_fields = {
+            event_fields.update({
                 'guid': guid,
                 'system_time': system_time,
                 'event_record_id': event_record_id,
-                **common_fields,
-                **extra_fields
-            }
+            })
+
+            # Combine with any constant fields
+            event_fields.update(constant_fields)
 
             # Select a random event template
             unformatted_event = random.choice(WIN_EVENTS)
@@ -704,7 +720,7 @@ class Events:
             winevent_messages.append(win_event)
 
         return winevent_messages
-
+    
     @classmethod
     def json(
         cls,
@@ -717,62 +733,79 @@ class Events:
         required_fields: Optional[str] = None
     ) -> List[dict]:
         """
-        Generate optimized fake JSON messages representing discovered vulnerabilities.
+        Generate fake JSON messages representing discovered vulnerabilities with per-message randomization.
+
+        Args:
+            count (int): Number of JSON messages to generate.
+            datetime_iso (Optional[datetime]): Starting datetime for the messages.
+            vendor (Optional[str]): Vendor name.
+            product (Optional[str]): Product name.
+            version (Optional[str]): Product version.
+            observables (Optional[Observables]): Observables object with predefined values.
+            required_fields (Optional[str]): Comma-separated string of required fields.
+
+        Returns:
+            List[dict]: A list of generated JSON messages.
         """
         json_messages = []
-        faker =  Events.faker
+        faker = Events.faker
 
         # Precompute vendor, product, and version details
         vendor = vendor or faker.company()
         product = product or "UnknownProduct"
         version = version or faker.numerify("1.0.#")
 
-        # Set initial datetime and precompute required fields if not provided
+        # Set initial datetime
         datetime_iso = datetime_iso or datetime.now() - timedelta(hours=1)
-        required_fields_list = required_fields.split(",") if required_fields else (
-            ["cve_id", "host", "file_hash"] if product == "VulnScanner" else ["user", "host"]
-        )
 
-        # Precompute static fields
-        severity = Events._set_field("severity")
-        common_fields = {}
-        for field in required_fields_list:
-            value = None
-            if observables and hasattr(observables, field):
-                obs_value = getattr(observables, field)
-                if obs_value:
-                    if isinstance(obs_value, list):
-                        value = random.choice(obs_value)
-                    else:
-                        value = obs_value
-            if value is None:
-                value = Events._set_field(field)
-            common_fields[field] = value
+        # Set required fields
+        if required_fields:
+            required_fields_list = required_fields.split(",")
+        else:
+            required_fields_list = (
+                ["cve_id", "host", "file_hash"] if product == "VulnScanner" else ["user", "host"]
+            )
 
-        # Preprocess additional observables not in required_fields
-        extra_fields = {}
-        if observables:
-            observables_dict = vars(observables)
-            for key, value in observables_dict.items():
-                if value and key not in required_fields_list:
-                    val = random.choice(value) if isinstance(value, list) else value
-                    extra_fields[key] = val
+        # Convert observables to a dictionary for easy access
+        observables_dict = vars(observables) if observables else {}
 
-        # Loop to generate JSON events
+        # Precompute constant fields
+        constant_fields = {
+            'vendor': vendor,
+            'product': product,
+            'version': version,
+        }
+
+        # Generate JSON events
         for i in range(count):
             # Adjust datetime for each message
             current_datetime = datetime_iso + timedelta(seconds=i)
+            datetime_str = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
 
-            # Initialize event with static fields
-            event = {
-                'vendor': vendor,
-                'product': product,
-                'version': version,
-                'datetime_iso': current_datetime.strftime("%Y-%m-%d %H:%M:%S"),
-                'severity': severity,
-                **common_fields,
-                **extra_fields
+            # Generate variable fields per message
+            event_fields = {
+                'datetime_iso': datetime_str,
+                'severity': Events._set_field('severity'),
             }
+
+            # Generate required fields per message
+            for field in required_fields_list:
+                value = None
+                if field in observables_dict and observables_dict[field]:
+                    obs_value = observables_dict[field]
+                    value = random.choice(obs_value) if isinstance(obs_value, list) else obs_value
+                else:
+                    value = Events._set_field(field)
+                event_fields[field] = value
+
+            # Include additional observables not in required fields
+            for key, value in observables_dict.items():
+                if value and key not in required_fields_list:
+                    val = random.choice(value) if isinstance(value, list) else value
+                    event_fields[key] = val
+
+            # Combine all fields into the event
+            event = {**constant_fields, **event_fields}
 
             # Append generated event to the list
             json_messages.append(event)

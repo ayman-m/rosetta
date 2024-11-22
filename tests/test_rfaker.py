@@ -2,8 +2,8 @@ import unittest
 import time
 from rosetta.rfaker import Events, Observables, ObservableType, ObservableKnown
 
-local_ip, remote_ip, src_host, dst_host = ["192.168.10.10"], ["1.1.1.1"], ["abc"], ["xyz"]
-url, remote_port = ["https://example.org"], ["555"]
+local_ip, remote_ip, src_host, dst_host = ["192.168.10.10","192.168.10.11","192.168.10.12"], ["1.1.1.1","1.1.1.2","1.1.1.3"], ["abc"], ["xyz"]
+url, remote_port = ["https://example.org"], ["555","556","557","558"]
 protocol, app = ["ftp"], ["chrome.exe"]
 user = ["ayman"]
 file_name, file_hash = ["test.zip"], ["719283fd5600eb631c23b290530e4dac9029bae72f15299711edbc800e8e02b2"]
@@ -107,7 +107,6 @@ class TestRFaker(unittest.TestCase):
         end_time = time.time()
         latency = end_time - start_time
         print(f"CEF generation latency for 10 logs: {latency:.4f} seconds")
-
         self.assertTrue(isinstance(fake_messages, list))
         self.assertEqual(len(fake_messages), 10)
         for message in fake_messages:
