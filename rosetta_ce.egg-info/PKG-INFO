@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: rosetta-ce
-Version: 1.6.9
+Version: 1.7.0
 Summary: Rosetta is a Python package that can be used to fake security logs and alerts for testing different detection and response use cases.
 Home-page: https://github.com/ayman-m/rosetta
 Author: Ayman Mahmoud

@@ -2,9 +2,10 @@ import random
 import requests
 import warnings
 import ipaddress
-import json
 import csv
 import hashlib
+import itertools
+import time
 from enum import Enum
 from functools import reduce
 from faker import Faker
@@ -180,7 +181,7 @@ class Observables:
                 warnings.warn(f"No source of a bad ip , generating a random IP.")
                 for i in range(count):
                     gen_observables.append(faker.ipv4())
-        if observable_type == ObservableType.IP and known == ObservableKnown.GOOD:
+        elif observable_type == ObservableType.IP and known == ObservableKnown.GOOD:
             for source in GOOD_IP_SOURCES:
                 try:
                     gen_observables = cls._get_observables_from_source(source)[:count]
@@ -192,7 +193,7 @@ class Observables:
                 warnings.warn(f"No source of a good ip , generating a random IP.")
                 for i in range(count):
                     gen_observables.append(faker.ipv4())
-        if observable_type == ObservableType.URL and known == ObservableKnown.BAD:
+        elif observable_type == ObservableType.URL and known == ObservableKnown.BAD:
             for source in BAD_URL_SOURCES:
                 try:
                     gen_observables = cls._get_observables_from_source(source)[:count]
@@ -204,7 +205,7 @@ class Observables:
                 warnings.warn(f"No source of a bad url , generating a random url.")
                 for i in range(count):
                     gen_observables.append(faker.url())
-        if observable_type == ObservableType.URL and known == ObservableKnown.GOOD:
+        elif observable_type == ObservableType.URL and known == ObservableKnown.GOOD:
             for source in GOOD_URL_SOURCES:
                 try:
                     gen_observables = cls._get_observables_from_source(source)[:count]
@@ -216,7 +217,7 @@ class Observables:
                 warnings.warn(f"No source of a good url , generating a random url.")
                 for i in range(count):
                     gen_observables.append(faker.url())
-        if observable_type == ObservableType.SHA256 and known == ObservableKnown.BAD:
+        elif observable_type == ObservableType.SHA256 and known == ObservableKnown.BAD:
             for source in BAD_SHA256_SOURCES:
                 try:
                     gen_observables = cls._get_observables_from_source(source)[:count]
@@ -229,7 +230,7 @@ class Observables:
                 for i in range(count):
                     random_string = faker.text(max_nb_chars=50)
                     gen_observables.append(hashlib.sha256(random_string.encode()).hexdigest())
-        if observable_type == ObservableType.SHA256 and known == ObservableKnown.GOOD:
+        elif observable_type == ObservableType.SHA256 and known == ObservableKnown.GOOD:
             for source in GOOD_SHA256_SOURCES:
                 try:
                     gen_observables = cls._get_observables_from_source(source)[:count]
@@ -242,7 +243,7 @@ class Observables:
                 for i in range(count):
                     random_string = faker.text(max_nb_chars=50)
                     gen_observables.append(hashlib.sha256(random_string.encode()).hexdigest())
-        if observable_type == ObservableType.CVE:
+        elif observable_type == ObservableType.CVE:
             for source in CVE_SOURCES:
                 try:
                     gen_observables = cls._get_observables_from_source(source)[:count]
@@ -255,7 +256,7 @@ class Observables:
                 for i in range(count):
                     fake_cve = "CVE-" + faker.numerify(text="####-####")
                     gen_observables.append(fake_cve)
-        if observable_type == ObservableType.TERMS:
+        elif observable_type == ObservableType.TERMS:
             for source in TERMS_SOURCES:
                 try:
                     gen_observables = cls._get_observables_from_source(source)[:count]
@@ -272,633 +273,573 @@ class Observables:
 
 class Events:
 
-    @staticmethod
-    def _create_faker():
-        """
-        Returns:
-            Faker instance.
-        """
-        return Faker()
+    faker = Faker()
+    field_timings = {}
 
     @staticmethod
-    def _create_generator():
-        """
-        Returns:
-            Faker instance.
-        """
-        return Observables()
-
-    @classmethod
-    def set_field(cls, field, observables: Optional[Observables] = None):
+    def _set_field(field):
         """
         Returns:
             Field value.
         """
-        field_value = None
-        faker = cls._create_faker()
-        if field == "pid":
-            field_value = faker.random_int(min=1000, max=65535)
-        if field == "src_host":
-            field_value = random.choice(observables.src_host) if observables and observables.src_host \
-                else faker.hostname()
-        if field == "dst_host":
-            field_value = random.choice(observables.dst_host) if observables and observables.dst_host \
-                else faker.hostname()
-        if field == "user":
-            field_value = random.choice(observables.user) if observables and observables.user \
-                else faker.user_name()
-        if field == "unix_process":
-            field_value = random.choice(observables.unix_process) if observables and observables.unix_process \
-                else "sudo"
-        if field == "unix_child_process":
-            field_value = random.choice(observables.unix_child_process) if observables and \
-                                                                        observables.unix_child_process else "sudo"
-        if field == "unix_cmd":
-            field_value = random.choice(observables.unix_cmd) if observables and observables.unix_cmd \
-                else random.choice(UNIX_CMD)
-        if field == "technique":
-            field_value = random.choice(observables.technique) if observables and observables.technique \
-                else random.choice(ATTACK_TECHNIQUES)
-        if field == "entry_type":
-            field_value = random.choice(observables.entry_type) if observables and observables.entry_type \
-                else faker.sentence(nb_words=2)
-        if field == "sensor":
-            field_value = random.choice(observables.sensor) if observables and observables.sensor \
-                else faker.sentence(nb_words=1)
-        if field == "event_id":
-            field_value = random.choice(observables.event_id) if observables and observables.event_id \
-                else faker.random_int(min=10, max=1073741824)       
-        if field == "error_code":
-            field_value = random.choice(observables.error_code) if observables and observables.error_code \
-                else faker.random_int(min=1000, max=5000)  
-        if field == "terms":
-            field_value = random.choice(observables.terms) if observables and observables.terms \
-                else faker.sentence(nb_words=10)
-        if field == "alert_types":
-            field_value = random.choice(observables.alert_types) if observables and observables.alert_types \
-                else faker.sentence(nb_words=1)
-        if field == "action_status":
-            field_value = random.choice(observables.action_status) if observables and observables.action_status \
-                else random.choice(ACTIONS)
-        if field == "severity":
-            field_value = random.choice(observables.severity) if observables and observables.severity \
-                else random.choice(SEVERITIES)
-        if field == "local_ip":
-            field_value = random.choice(observables.local_ip) if observables and observables.local_ip \
-                    else faker.ipv4()
-        if field == "local_port":
-            field_value = faker.random_int(min=1024, max=65535)
-        if field == "remote_ip":
-            field_value = random.choice(observables.remote_ip) if observables and observables.remote_ip \
-                    else Observables.generator(observable_type=ObservableType.IP, known=ObservableKnown.BAD, count=1)[0]
-        if field == "local_ip_v6":
-            field_value = random.choice(observables.local_ip_v6) if observables and observables.local_ip_v6 \
-                    else faker.ipv6()
-        if field == "remote_ip_v6":
-            field_value = random.choice(observables.remote_ip_v6) if observables and observables.remote_ip_v6 \
-                    else faker.ipv6()            
-        if field == "remote_port":
-            field_value = random.choice(observables.remote_port) if observables and observables.remote_port \
-                    else faker.random_int(min=1024, max=65535)
-        if field == "dst_url":
-            field_value = random.choice(observables.url) if observables and observables.url \
-                    else Observables.generator(observable_type=ObservableType.URL, known=ObservableKnown.BAD, count=1)
-        if field == "inbound_bytes":
-            field_value = random.choice(observables.inbound_bytes) if observables and observables.inbound_bytes \
-                    else faker.random_int(min=10, max=1073741824)
-        if field == "outbound_bytes":
-            field_value = random.choice(observables.outbound_bytes) if observables and observables.outbound_bytes \
-                    else faker.random_int(min=10, max=1073741824)
-        if field == "app":
-            field_value = random.choice(observables.app) if observables and observables.app \
-                    else faker.sentence(nb_words=2)
-        if field == "os":
-            field_value = random.choice(observables.os) if observables and observables.os \
-                    else random.choice(OS_LIST)
-        if field == "protocol":
-            field_value = random.choice(observables.protocol) if observables and observables.protocol \
-                    else random.choice(PROTOCOLS)
-        if field == "rule_id":
-            field_value = random.choice(observables.event_id) if observables and observables.event_id \
-                    else faker.random_int(min=1, max=200)
-        if field == "action":
-            field_value = random.choice(observables.action) if observables and observables.action \
-                    else random.choice(ACTIONS)
-        if field == "src_domain":
-            field_value = random.choice(observables.src_domain) if observables and observables.src_domain \
-                    else faker.domain_name()
-        if field == "dst_domain":
-            field_value = random.choice(observables.dst_domain) if observables and observables.dst_domain \
-                    else faker.domain_name()
-        if field == "sender_email":
-            field_value = random.choice(observables.sender_email) if observables and observables.sender_email \
-                    else faker.email()
-        if field == "recipient_email":
-            field_value = random.choice(observables.recipient_email) if observables and observables.recipient_email \
-                    else faker.email()
-        if field == "email_subject":
-            field_value = random.choice(observables.email_subject) if observables and observables.email_subject \
-                    else faker.sentence(nb_words=6)
-        if field == "email_body":
-            field_value = random.choice(observables.email_body) if observables and observables.email_body else \
-                    faker.sentence(nb_words=50)
-        if field == "attachment_hash":
-            field_value = random.choice(observables.file_hash) if observables and observables.file_hash \
-                    else Observables.generator(observable_type=ObservableType.SHA256, known=ObservableKnown.BAD,
-                                            count=1)
-        if field == "spam_score":
-            field_value = faker.random_int(min=1, max=5)
-        if field == "method":
-            field_value = random.choice(observables.technique).get('mechanism') if observables and \
-                    observables.technique else random.choice(TECHNIQUES).get('mechanism')
-        if field == "url":
-            field_value = random.choice(observables.technique).get('indicator') if observables and \
-                    observables.technique else random.choice(TECHNIQUES).get('indicator')
-        if field == "user_agent":
-            field_value = faker.user_agent()
-        if field == "referer":
-            field_value = random.choice(observables.url) if observables and observables.url \
-                    else Observables.generator(observable_type=ObservableType.URL, known=ObservableKnown.BAD, count=1)
-        if field == "response_code":
-            field_value = random.choice(observables.error_code) if observables and observables.error_code \
-                    else random.choice(ERROR_CODE)
-        if field == "response_size":
-            field_value = faker.random_int(min=100, max=10000)
-        if field == "attack_type":
-            field_value = random.choice(observables.technique).get('technique') if observables and \
-                    observables.technique else random.choice(TECHNIQUES).get('technique')
-        if field == "cookies":
-            field_value = f"{faker.word()}={faker.uuid4()}"
-        if field == "guid":
-            field_value = faker.uuid4()
-        if field == "transmitted_services":
-            field_value = faker.sentence(nb_words=5)
-        if field == "process_id":
-            field_value = faker.random_int()
-        if field == "new_process_id":
-            field_value = faker.random_int()
-        if field == "thread_id":
-            field_value = faker.random_int()
-        if field == "target_pid":
-            field_value = faker.random_int()
-        if field == "subject_login_id":
-            field_value = faker.random_int()
-        if field == "win_user_id":
-            field_value = "S-1-" + str(faker.random_int())
-        if field == "destination_login_id":
-            field_value = faker.random_int()
-        if field == "privilege_list":
-            field_value = faker.sentence(nb_words=5)
-        if field == "event_record_id":
-            field_value = random.choice(observables.event_id) if observables and observables.event_id \
-                else faker.random.randint(1, 999)
-        if field == "win_process":
-            field_value = random.choice(observables.win_process) if observables and observables.win_process \
-                else random.choice(WIN_PROCESSES)
-        if field == "win_cmd":
-            field_value = random.choice(observables.win_cmd) if observables and observables.win_cmd \
-                else random.choice(WINDOWS_CMD)
-        if field == "win_child_process":
-            field_value = random.choice(observables.win_child_process) if \
-                observables and observables.win_child_process else random.choice(WIN_PROCESSES)
-        if field == "source_network_address":
-            field_value = random.choice(observables.local_ip) if observables and observables.local_ip \
-                else faker.ipv4_private()
-        if field == "file_name":
-            field_value = random.choice(observables.file_name) if observables and observables.file_name \
-                else faker.file_name()
-        if field == "cve":
-            field_value = random.choice(observables.cve) if observables and observables.cve \
-                    else Observables.generator(observable_type=ObservableType.CVE, count=1)
-        if field == "file_hash":
-            field_value = random.choice(observables.file_hash) if observables and observables.file_hash \
-                    else Observables.generator(observable_type=ObservableType.SHA256, known=ObservableKnown.BAD,
-                                            count=1)
-        if field == "incident_types":
-            field_value = random.choice(observables.incident_types) if observables and observables.incident_types \
-                else INCIDENTS_TYPES
-        if field == "analysts":
-            field_value = random.choice(observables.analysts) if observables and observables.analysts \
-                else [faker.unique.first_name() for _ in range(10)]
-        if field == "duration":
-            field_value = random.randint(1, 5)
-        if field == "log_id":
-            field_value = faker.uuid4()
-        if field == "alert_name":
-            field_value = random.choice(observables.alert_name) if observables and observables.alert_name \
-                else faker.sentence(nb_words=4)
-        if field == "query_type":
-            field_value = random.choice(observables.query_type) if \
-                observables and observables.query_type else random.choice(QUERY_TYPE)
-        if field == "database_name":
-            field_value = random.choice(observables.database_name) if \
-                observables and observables.database_name else random.choice(DATABASE_NAME)
-        if field == "query":
-            field_value = random.choice(observables.query) if \
-                observables and observables.query else random.choice(QUERY) 
+
+        faker = Events.faker
+
+        # Define default generators for each field
+        default_generators = {
+            "pid": lambda: faker.random_int(min=1000, max=65535),
+            "src_host": faker.hostname,
+            "dst_host": faker.hostname,
+            "user": faker.user_name,
+            "unix_process": lambda: "sudo",
+            "unix_child_process": lambda: "sudo",
+            "unix_cmd": lambda: random.choice(UNIX_CMD),
+            "technique": lambda: random.choice(ATTACK_TECHNIQUES),
+            "entry_type": lambda: faker.sentence(nb_words=2),
+            "sensor": lambda: faker.sentence(nb_words=1),
+            "event_id": lambda: faker.random_int(min=10, max=1073741824),
+            "error_code": lambda: faker.random_int(min=1000, max=5000),
+            "terms": lambda: faker.sentence(nb_words=10),
+            "alert_types": lambda: faker.sentence(nb_words=1),
+            "action_status": lambda: random.choice(ACTIONS),
+            "severity": lambda: random.choice(SEVERITIES),
+            "local_ip": faker.ipv4,
+            "local_port": lambda: faker.random_int(min=1024, max=65535),
+            "remote_ip": lambda: Observables.generator(
+                observable_type=ObservableType.IP,
+                known=ObservableKnown.BAD,
+                count=1
+            )[0],
+            "local_ip_v6": faker.ipv6,
+            "remote_ip_v6": faker.ipv6,
+            "remote_port": lambda: faker.random_int(min=1024, max=65535),
+            "dst_url": lambda: Observables.generator(
+                observable_type=ObservableType.URL,
+                known=ObservableKnown.BAD,
+                count=1
+            )[0],
+            "inbound_bytes": lambda: faker.random_int(min=10, max=1073741824),
+            "outbound_bytes": lambda: faker.random_int(min=10, max=1073741824),
+            "app": lambda: faker.sentence(nb_words=2),
+            "os": lambda: random.choice(OS_LIST),
+            "protocol": lambda: random.choice(PROTOCOLS),
+            "rule_id": lambda: faker.random_int(min=1, max=200),
+            "action": lambda: random.choice(ACTIONS),
+            "src_domain": faker.domain_name,
+            "dst_domain": faker.domain_name,
+            "sender_email": faker.email,
+            "recipient_email": faker.email,
+            "email_subject": lambda: faker.sentence(nb_words=6),
+            "email_body": lambda: faker.sentence(nb_words=50),
+            "attachment_hash": lambda: Observables.generator(
+                observable_type=ObservableType.SHA256,
+                known=ObservableKnown.BAD,
+                count=1
+            )[0],
+            "spam_score": lambda: faker.random_int(min=1, max=5),
+            "method": lambda: random.choice(TECHNIQUES).get('mechanism'),
+            "url": lambda: random.choice(TECHNIQUES).get('indicator'),
+            "user_agent": faker.user_agent,
+            "referer": lambda: Observables.generator(
+                observable_type=ObservableType.URL,
+                known=ObservableKnown.BAD,
+                count=1
+            )[0],
+            "response_code": lambda: random.choice(ERROR_CODE),
+            "response_size": lambda: faker.random_int(min=100, max=10000),
+            "attack_type": lambda: random.choice(TECHNIQUES).get('technique'),
+            "cookies": lambda: f"{faker.word()}={faker.uuid4()}",
+            "guid": faker.uuid4,
+            "transmitted_services": lambda: faker.sentence(nb_words=5),
+            "process_id": faker.random_int,
+            "new_process_id": faker.random_int,
+            "thread_id": faker.random_int,
+            "target_pid": faker.random_int,
+            "subject_login_id": faker.random_int,
+            "win_user_id": lambda: "S-1-" + str(faker.random_int()),
+            "destination_login_id": faker.random_int,
+            "privilege_list": lambda: faker.sentence(nb_words=5),
+            "event_record_id": lambda: faker.random_int(min=1, max=999),
+            "win_process": lambda: random.choice(WIN_PROCESSES),
+            "win_cmd": lambda: random.choice(WINDOWS_CMD),
+            "win_child_process": lambda: random.choice(WIN_PROCESSES),
+            "source_network_address": faker.ipv4_private,
+            "file_name": faker.file_name,
+            "cve": lambda: Observables.generator(
+                observable_type=ObservableType.CVE,
+                count=1
+            )[0],
+            "file_hash": lambda: Observables.generator(
+                observable_type=ObservableType.SHA256,
+                known=ObservableKnown.BAD,
+                count=1
+            )[0],
+            "incident_types": lambda: random.choice(INCIDENTS_TYPES),
+            "analysts": lambda: [faker.unique.first_name() for _ in range(10)],
+            "duration": lambda: random.randint(1, 5),
+            "log_id": faker.uuid4,
+            "alert_name": lambda: faker.sentence(nb_words=4),
+            "query_type": lambda: random.choice(QUERY_TYPE),
+            "database_name": lambda: random.choice(DATABASE_NAME),
+            "query": lambda: random.choice(QUERY),
+        }
+
+        if field in default_generators:
+            generator = default_generators[field]
+            field_value = generator() if callable(generator) else generator()
+        else:
+            field_value = faker.word()
+
         return field_value
-
+    
     @classmethod
-    def syslog(cls, count: int, datetime_iso: Optional[datetime] = None, observables: Optional[Observables] = None,
-               required_fields: Optional[str] = None) -> List[str]:
+    def syslog(
+        cls,
+        count: int,
+        datetime_iso: Optional[datetime] = None,
+        observables: Optional['Observables'] = None,
+        required_fields: Optional[str] = None
+    ) -> List[str]:
         """
-        Generate fake syslog messages.
-
-        Args:
-            count: The number of syslog messages to generate.
-            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during
-            the past hour from now will be used.
-            observables: Optional. An observables object. If not provided, random objservable will be generated
-            and used.
-            required_fields: Optional. A list of fields that are required to present in the generated data, whether from
-            observables or randomely.
-        Returns:
-            A list of syslog messages.
-
-        Examples:
-            >>> Events.syslog(5)
-            ['Jan 01 05:32:48 myhostname sudo[1023]: username : COMMAND ; cat /etc/shadow',
-             'Jan 01 05:17:59 myhostname sudo[2019]: username : COMMAND ; find / -name \'*.log\' -exec rm -f {} \\;',
-             'Jan 01 05:46:16 myhostname sudo[3132]: username : COMMAND ; dd if=/dev/zero of=/dev/sda',
-             'Jan 01 05:08:08 myhostname sudo[4111]: username : COMMAND ; chmod -R 777 /',
-             'Jan 01 05:59:41 myhostname sudo[5195]: username : COMMAND ; chown -R nobody:nogroup /']
-
+        Generate fake syslog messages with optimizations for efficiency.
         """
         syslog_messages = []
-        faker = cls._create_faker()
+        faker = Events.faker
+
+        # Predefine default datetime if not provided
         if datetime_iso is None:
             datetime_iso = datetime.now() - timedelta(hours=1)
             datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
-        if not required_fields:
-            required_fields = "pid,host,user,unix_process,unix_cmd"
+
+        # Set default required fields
+        required_fields_list = required_fields.split(",") if required_fields else [
+            "pid", "host", "user", "unix_process", "unix_cmd"
+        ]
+
+        # Precompute static values for required fields
+        common_fields = {}
+        for field in required_fields_list:
+            value = None
+            if observables and hasattr(observables, field):
+                obs_value = getattr(observables, field)
+                if obs_value:
+                    if isinstance(obs_value, list):
+                        value = random.choice(obs_value)
+                    else:
+                        value = obs_value
+            if value is None:
+                value = Events._set_field(field)
+            common_fields[field] = value
+
+        # Preprocess observables
+        extra_fields = []
+        if observables:
+            observables_dict = vars(observables)
+            for key, value in observables_dict.items():
+                if value and key not in required_fields_list:
+                    if isinstance(value, list):
+                        val = random.choice(value)
+                    else:
+                        val = value
+                    extra_fields.append(str(val))
+
+        # Generate all syslog messages
         for i in range(count):
-            datetime_iso += timedelta(seconds=1)
-            syslog_message = f"{datetime_iso.strftime('%Y-%m-%d %H:%M:%S')}"
-            for field in required_fields.split(","):
-                syslog_message += f" {cls.set_field(field, observables)}"
-            if observables:
-                for observable, observable_value in vars(observables).items():
-                    if observable_value and observable not in required_fields.split(","):
-                        syslog_message += f" {random.choice(observable_value)}"
-            syslog_messages.append(syslog_message)
+            # Update datetime for each log
+            current_time = (datetime_iso + timedelta(seconds=i + 1)).strftime('%b %d %H:%M:%S')
+
+            # Build the syslog message efficiently
+            syslog_message_parts = [f"{current_time}"]
+
+            # Insert required fields
+            syslog_message_parts.extend(str(common_fields[field]) for field in required_fields_list)
+
+            # Append additional observables not in required fields
+            syslog_message_parts.extend(extra_fields)
+
+            syslog_messages.append(" ".join(syslog_message_parts))
+
         return syslog_messages
 
     @classmethod
-    def cef(cls, count: int, vendor: Optional[str] = None, product: Optional[str] = None,
-            version: Optional[str] = None, datetime_iso: Optional[datetime] = None,
-            observables: Optional[Observables] = None, required_fields: Optional[str] = None) -> List[str]:
-        """
-        Generates fake CEF (Common Event Format) messages.
-
-        Args:
-            count: The number of CEF messages to generate.
-            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during.
-            vendor: Optional. The vendor.
-            product: Optional. The product value options include:
-            - Firewall
-            - EmailGW
-            version: Optional. The version.
-            observables: Optional. An observables object. If not provided, random objservable will be generated
-            and used.
-            required_fields: Optional. A list of fields that are required to present in the generated data, whether from
-            observables or randomely.
-        Returns:
-            A list of fake CEF messages in string format.
-
-        Raises:
-            None.
-
-        Example Usage:
-            >>> Events.cef(3)
-            ['CEF:0|Acme|Firewall|1.0.0|ddab6607-1c35-4e81-a54a-99b1c9b77e49|Firewall ALLOW UDP traffic
-            from example.com:61434 to 23.216.45.109:47983|1|src=example.com spt=61434 dst=23.216.45.109
-            dpt=47983 proto=UDP act=ALLOW',
-             'CEF:0|Acme|Firewall|1.0.0|25b41f8f-8a63-4162-a69c-cb43f8c8e49f|Firewall DENY TCP traffic
-             from example.com:11460 to 184.72.194.90:3087|8|src=example.com spt=11460 dst=184.72.194.90
-             dpt=3087 proto=TCP act=DENY',
-             'CEF:0|Acme|Firewall|1.0.0|a3faedaa-5109-4849-b9ec-1ad6c5f8a5ec|Firewall ALLOW TCP traffic
-             from example.com:25068 to 81.171.9.216:6157|2|src=example.com spt=25068 dst=81.171.9.216
-             dpt=6157 proto=TCP act=ALLOW']
-        """
+    def cef(
+        cls,
+        count: int,
+        vendor: Optional[str] = None,
+        product: Optional[str] = None,
+        version: Optional[str] = None,
+        datetime_iso: Optional[datetime] = None,
+        observables: Optional['Observables'] = None,
+        required_fields: Optional[str] = None
+    ) -> List[str]:
         cef_messages = []
-        faker = cls._create_faker()
+        faker =  Events.faker
         vendor = vendor or faker.company()
+        product = product or faker.word()
         version = version or faker.numerify("1.0.#")
-        if datetime_iso is None:
-            datetime_iso = datetime.now() - timedelta(hours=1)
-            datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
-        if not required_fields:
-            if product == "Firewall":
-                required_fields = "local_ip,local_port,remote_ip,remote_port,dst_url,inbound_bytes," \
-                          "outbound_bytes,protocol,rule_id,action"
-            elif product == "EmailGW":
-                required_fields = "local_ip,src_domain,sender_email,recipient_email,email_subject,email_body," \
-                                  "attachment_hash,spam_score,action"
-            else:
-                required_fields = "local_ip,local_port,remote_ip,remote_port,protocol,rule_id,action"
+        datetime_iso = datetime_iso or datetime.now() - timedelta(hours=1)
+        required_fields_list = required_fields.split(",") if required_fields else [
+            "local_ip", "local_port", "remote_ip", "remote_port", "protocol", "rule_id", "action"
+        ]
+ 
+        common_fields = {}
+        for field in required_fields_list:
+            value = None
+            if observables and hasattr(observables, field):
+                obs_value = getattr(observables, field)
+                if obs_value:
+                    if isinstance(obs_value, list):
+                        value = random.choice(obs_value)
+                    else:
+                        value = obs_value
+            if value is None:
+                value = Events._set_field(field)
+            common_fields[field] = value
+
+        
+        # Preprocess observables
+        extra_fields_str = ""
+        if observables:
+            observables_dict = vars(observables)
+            extra_fields = [
+                f"{key}={random.choice(value)}"
+                for key, value in observables_dict.items()
+                if value and key not in required_fields_list
+            ]
+            if extra_fields:
+                extra_fields_str = " " + " ".join(extra_fields)
+        
+        # Pre-compile the CEF message template
+        cef_template = (
+            f"CEF:0|{vendor}|{product}|{version}|{{log_id}}|{{current_datetime}}|{{severity}}|"
+            + " ".join([f"{field}={common_fields[field]}" for field in required_fields_list])
+        )
+        
+        # Generate events
         for i in range(count):
-            datetime_iso += timedelta(seconds=1)
-            cef_message = f"CEF:0|{vendor}|{product}|{version}|{cls.set_field('log_id', observables)}|{datetime_iso}" \
-                          f"|{cls.set_field('severity', observables)}|"
-            for field in required_fields.split(","):
-                cef_message += f" {field}={cls.set_field(field, observables)}"
-            if observables:
-                for observable, observable_value in vars(observables).items():
-                    if observable_value and observable not in required_fields.split(","):
-                        cef_message += f" {observable}={random.choice(observable_value)}"
+            current_datetime = datetime_iso + timedelta(seconds=i)
+            log_id = faker.uuid4()
+            severity = common_fields.get('severity') or 'low'
+            
+            cef_message = cef_template.format(
+                log_id=log_id,
+                current_datetime=current_datetime.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                severity=severity
+            )
+            cef_message += extra_fields_str
             cef_messages.append(cef_message)
+        
         return cef_messages
-
+   
     @classmethod
-    def leef(cls, count, datetime_iso: Optional[datetime] = None, vendor: Optional[str] = None,
-             product: Optional[str] = None, version: Optional[str] = None,
-             observables: Optional[Observables] = None, required_fields: Optional[str] = None) -> List[str]:
+    def leef(
+        cls,
+        count: int,
+        datetime_iso: Optional[datetime] = None,
+        vendor: Optional[str] = None,
+        product: Optional[str] = None,
+        version: Optional[str] = None,
+        observables: Optional['Observables'] = None,
+        required_fields: Optional[str] = None
+    ) -> List[str]:
         """
-        Generates fake LEEF (Log Event Extended Format) messages.
-
-        Parameters:
-            count (int): The number of LEEF messages to generate.
-            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during.
-            vendor: Optional. The vendor.
-            product: Optional. The product.
-            version: Optional. The version.
-            observables: An observables object. If not provided, random objservable will be generated and used.
-            required_fields: Optional. A list of fields that are required to present in the generated data, whether from
-            observables or randomely.
-
-        Returns:
-            A list of generated LEEF messages.
-
-        Example:
-            To generate 10 fake LEEF messages:
-            ```
-            >>> messages = Events.leef(count=2)
-            >>> print(messages)
-            ['LEEF:1.0|Leef|Payment Portal|1.0|192.168.0.1|mycomputer|08:00:27:da:2e:2e|08:00:27:da:2e:2f|src=10.0.0.1
-             dst=mycomputer spt=60918 dpt=443 request=https://example.com/?q=<script>alert("xss")</script>
-             method=GET proto=HTTP/1.1 status=200 request_size=5119 response_size=6472
-             user_agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)
-             Chrome/93.0.4577.63 Safari/537.36',
-             'LEEF:1.0|Leef|Payment Portal|1.0|192.168.0.1|mycomputer|08:00:27:da:2e:2e|08:00:27:da:2e:2f|src=10.0.0.2
-              dst=mycomputer spt=57251 dpt=443 request=https://example.com/admin.php?sessionid=12345 method=POST
-               proto=HTTP/1.1 status=404 request_size=1216 response_size=9729 user_agent=Mozilla/5.0
-               (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3']
+        Generates optimized fake LEEF (Log Event Extended Format) messages.
         """
         leef_messages = []
-        faker = cls._create_faker()
+        faker =  Events.faker
         vendor = vendor or faker.company()
+        product = product or faker.word()
         version = version or faker.numerify("1.0.#")
-        event_id = faker.random_int(min=101, max=501)
-        if datetime_iso is None:
-            datetime_iso = datetime.now() - timedelta(hours=1)
-            datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
-        if not required_fields:
-            if product == "WAF":
-                required_fields = "local_ip,local_port,host,method,url,protocol," \
-                                  "user_agent,referer,response_code,response_size,rule_id,action,attack_type,cookies"
-            else:
-                required_fields = "local_ip,local_port,host,url,protocol,response_code,action"
-        for i in range(count):
-            datetime_iso += timedelta(seconds=1)
-            leef_message = f"LEEF:1.0|{vendor}|{product}|{version}|{event_id}|" \
-                           f"severity={cls.set_field('severity', observables)}  devtime={datetime_iso}"
-            for field in required_fields.split(","):
-                leef_message += f"  {field}={cls.set_field(field, observables)}"
-            if observables:
-                for observable, observable_value in vars(observables).items():
-                    if observable_value and observable not in required_fields.split(","):
-                        leef_message += f"  {observable}={random.choice(observable_value)}"
-            leef_messages.append(leef_message)
-        return leef_messages
 
+        # Set starting datetime and default fields if necessary
+        datetime_iso = datetime_iso or datetime.now() - timedelta(hours=1)
+        required_fields_list = required_fields.split(",") if required_fields else [
+            "local_ip", "local_port", "host", "url", "protocol", "response_code", "action"
+        ]
+
+        # Precompute event_id and severity
+        event_id = faker.random_int(min=101, max=501)
+        severity = Events._set_field("severity")
+
+        # Precompute common fields
+        common_fields = {}
+        for field in required_fields_list:
+            value = None
+            if observables and hasattr(observables, field):
+                obs_value = getattr(observables, field)
+                if obs_value:
+                    if isinstance(obs_value, list):
+                        value = random.choice(obs_value)
+                    else:
+                        value = obs_value
+            if value is None:
+                value = Events._set_field(field)
+            common_fields[field] = value
+
+        # Preprocess extra observables
+        extra_fields = []
+        if observables:
+            observables_dict = vars(observables)
+            for key, value in observables_dict.items():
+                if value and key not in required_fields_list:
+                    val = random.choice(value) if isinstance(value, list) else value
+                    extra_fields.append(f"  {key}={val}")
+
+        # Pre-compile the LEEF message template
+        leef_template = (
+            f"LEEF:1.0|{vendor}|{product}|{version}|{event_id}|"
+            f"severity={severity}  devTime={{current_datetime}}"
+            + "".join(f"  {field}={common_fields[field]}" for field in required_fields_list)
+            + "".join(extra_fields)
+        )
+
+        # Generate messages
+        for i in range(count):
+            current_datetime = (datetime_iso + timedelta(seconds=i)).strftime('%b %d %H:%M:%S')
+
+            leef_message = leef_template.format(current_datetime=current_datetime)
+            leef_messages.append(leef_message)
+
+        return leef_messages
+    
     @classmethod
-    def winevent(cls, count, datetime_iso: Optional[datetime] = None, observables: Optional[Observables] = None) -> \
-            List[str]:
+    def winevent(
+        cls,
+        count: int,
+        datetime_iso: Optional[datetime] = None,
+        observables: Optional['Observables'] = None
+    ) -> List[str]:
         """
-        Generates fake Windows Event Log messages.
+        Generates optimized fake Windows Event Log messages using set_field.
 
         Args:
             count (int): The number of fake messages to generate.
-            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during
-            observables: An observables object. If not provided, random objservable will be generated and used.
+            datetime_iso (Optional[datetime]): The starting datetime for the messages.
+            observables (Optional[Observables]): An observables object with predefined values.
 
         Returns:
-            list: A list of fake Windows Event Log messages.
-
-        Examples:
-            >>> Events.winevent(1)
-            ['<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">...</Event>', ...]
+            List[str]: A list of fake Windows Event Log messages.
         """
         winevent_messages = []
-        faker = cls._create_faker()
+        faker = Events.faker
+
+        # Set starting datetime if not provided
         if datetime_iso is None:
             datetime_iso = datetime.now() - timedelta(hours=1)
             datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
+
+        # Define required fields
+        required_fields_list = [
+            "process_id",
+            "new_process_id",
+            "thread_id",
+            "target_pid",
+            "subject_login_id",
+            "user_id",
+            "destination_login_id",
+            "privilege_list",
+            "win_process",
+            "src_host",
+            "user_name",
+            "cmd",
+            "source_network_address",
+            "local_port",
+            "transmitted_services",
+            "file_name",
+            "src_domain"
+        ]
+
+        # Precompute common fields using set_field
+        common_fields = {}
+        for field in required_fields_list:
+            value = None
+            if observables and hasattr(observables, field):
+                obs_value = getattr(observables, field)
+                if obs_value:
+                    value = random.choice(obs_value) if isinstance(obs_value, list) else obs_value
+            if value is None:
+                value = Events._set_field(field)
+            common_fields[field] = value
+
+        # Preprocess extra observables not in required fields
+        extra_fields = {}
+        if observables:
+            observables_dict = vars(observables)
+            for key, value in observables_dict.items():
+                if value and key not in required_fields_list:
+                    val = random.choice(value) if isinstance(value, list) else value
+                    extra_fields[key] = val
+
+        # Generate events
         for i in range(count):
-            datetime_iso += timedelta(seconds=1)
+            # Update datetime for each event
+            current_datetime = datetime_iso + timedelta(seconds=i + 1)
+            system_time = current_datetime.strftime('%Y-%m-%d %H:%M:%S')
+
+            # Generate per-event fields
             guid = faker.uuid4()
-            local_port = faker.random_int(min=1024, max=65535)
-            transmitted_services = faker.sentence(nb_words=5)
-            system_time = datetime_iso
-            process_id = faker.random_int()
-            new_process_id = faker.random_int()
-            thread_id = faker.random_int()
-            target_pid = faker.random_int()
-            domain_name = faker.domain_name()
-            subject_login_id = faker.random_int()
-            user_id = "S-1-" + str(faker.random_int())
-            destination_login_id = faker.random_int()
-            privilege_list = faker.sentence(nb_words=5)
-            event_record_id = random.choice(observables.event_id) if observables and observables.event_id \
-                else faker.random.randint(1, 999)
-            process_name = random.choice(observables.win_process) if observables and observables.win_process \
-                else random.choice(WIN_PROCESSES)
-            host = random.choice(observables.src_host) if observables and observables.src_host \
-                else faker.hostname()
-            user_name = random.choice(observables.user) if observables and observables.user \
-                else faker.user_name()
-            cmd = random.choice(observables.win_cmd) if observables and observables.win_cmd \
-                else random.choice(WINDOWS_CMD)
-            source_network_address = random.choice(observables.local_ip) if observables and observables.local_ip \
-                else faker.ipv4_private()
-            file_name = random.choice(observables.file_name) if observables and observables.file_name \
-                else faker.file_name()
+
+            # Use event_id from observables if available
+            event_record_id = None
+            if observables and hasattr(observables, 'event_id') and observables.event_id:
+                event_record_id = random.choice(observables.event_id)
+            else:
+                event_record_id = Events._set_field('event_id')
+
+            # Prepare event fields
+            event_fields = {
+                'guid': guid,
+                'system_time': system_time,
+                'event_record_id': event_record_id,
+                **common_fields,
+                **extra_fields
+            }
+
+            # Select a random event template
             unformatted_event = random.choice(WIN_EVENTS)
-            win_event = unformatted_event.format(guid=guid, system_time=system_time, event_record_id=event_record_id,
-                                                 process_id=process_id, process_name=process_name,
-                                                 new_process_id=new_process_id, thread_id=thread_id,
-                                                 target_pid=target_pid, host=host, user_id=user_id, user_name=user_name,
-                                                 domain_name=domain_name, subject_login_id=subject_login_id,
-                                                 privilege_list=privilege_list, cmd=cmd,
-                                                 destination_login_id=destination_login_id,
-                                                 source_network_address=source_network_address, local_port=local_port,
-                                                 transmitted_services=transmitted_services, file_name=file_name)
+
+            # Format the event with all fields
+            win_event = unformatted_event.format(**event_fields)
+
             winevent_messages.append(win_event)
+
         return winevent_messages
 
     @classmethod
-    def json(cls, count, datetime_iso: Optional[datetime] = None, vendor: Optional[str] = None,
-             product: Optional[str] = None, version: Optional[str] = None, observables: Optional[Observables] = None,
-             required_fields: Optional[str] = None) -> List[dict]:
+    def json(
+        cls,
+        count: int,
+        datetime_iso: Optional[datetime] = None,
+        vendor: Optional[str] = None,
+        product: Optional[str] = None,
+        version: Optional[str] = None,
+        observables: Optional['Observables'] = None,
+        required_fields: Optional[str] = None
+    ) -> List[dict]:
         """
-        Generate fake JSON messages representing discovered vulnerabilities.
-
-        Args:
-            count (int): The number of JSON messages to generate.
-            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during.
-            vendor: Optional. The vendor.
-            product: Optional. The product value options include:
-            - VulnScanner
-            version: Optional. The version.
-            observables: An observables object. If not provided, random objservable will be generated and used.
-            required_fields: Optional. A list of fields that are required to present in the generated data, whether from
-            observables or randomely.
-        Returns:
-            List[Dict[str, Union[str, int]]]: A list of dictionaries representing the generated JSON messages.
-
-        Example:
-            >>> fake_messages = json(5)
-            >>> len(fake_messages)
-            5
-            >>> isinstance(fake_messages[0], dict)
-            True
-
+        Generate optimized fake JSON messages representing discovered vulnerabilities.
         """
         json_messages = []
-        faker = cls._create_faker()
+        faker =  Events.faker
+
+        # Precompute vendor, product, and version details
         vendor = vendor or faker.company()
+        product = product or "UnknownProduct"
         version = version or faker.numerify("1.0.#")
-        if datetime_iso is None:
-            datetime_iso = datetime.now() - timedelta(hours=1)
-            datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
-        if not required_fields:
-            if product == "VulnScanner":
-                required_fields = "cve_id,host,file_hash"
-            else:
-                required_fields = "user,host"
+
+        # Set initial datetime and precompute required fields if not provided
+        datetime_iso = datetime_iso or datetime.now() - timedelta(hours=1)
+        required_fields_list = required_fields.split(",") if required_fields else (
+            ["cve_id", "host", "file_hash"] if product == "VulnScanner" else ["user", "host"]
+        )
+
+        # Precompute static fields
+        severity = Events._set_field("severity")
+        common_fields = {}
+        for field in required_fields_list:
+            value = None
+            if observables and hasattr(observables, field):
+                obs_value = getattr(observables, field)
+                if obs_value:
+                    if isinstance(obs_value, list):
+                        value = random.choice(obs_value)
+                    else:
+                        value = obs_value
+            if value is None:
+                value = Events._set_field(field)
+            common_fields[field] = value
+
+        # Preprocess additional observables not in required_fields
+        extra_fields = {}
+        if observables:
+            observables_dict = vars(observables)
+            for key, value in observables_dict.items():
+                if value and key not in required_fields_list:
+                    val = random.choice(value) if isinstance(value, list) else value
+                    extra_fields[key] = val
+
+        # Loop to generate JSON events
         for i in range(count):
-            datetime_iso += timedelta(seconds=1)
+            # Adjust datetime for each message
+            current_datetime = datetime_iso + timedelta(seconds=i)
+
+            # Initialize event with static fields
             event = {
                 'vendor': vendor,
                 'product': product,
                 'version': version,
-                'datetime_iso': str(datetime_iso),
-                'severity': cls.set_field("severity", observables)
+                'datetime_iso': current_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                'severity': severity,
+                **common_fields,
+                **extra_fields
             }
-            for field in required_fields.split(","):
-                event[field] = cls.set_field(field, observables)
-            if observables:
-                for observable, observable_value in vars(observables).items():
-                    if observable_value and observable not in required_fields.split(","):
-                        event[observable] = random.choice(observable_value)
+
+            # Append generated event to the list
             json_messages.append(event)
+
         return json_messages
 
     @classmethod
     def incidents(cls, count, fields: Optional[str] = None, datetime_iso: Optional[datetime] = None,
-                  vendor: Optional[str] = None, product: Optional[str] = None, version: Optional[str] = None,
-                  observables: Optional[Observables] = None, required_fields: Optional[str] = None) -> List[dict]:
+                vendor: Optional[str] = None, product: Optional[str] = None, version: Optional[str] = None,
+                observables: Optional[Observables] = None, required_fields: Optional[str] = None) -> List[dict]:
         """
         Generates a list of fake incident data.
 
         Args:
             count (int): The number of incidents to generate.
-            fields (str, optional): A comma-separated list of incident fields to include in the output. If None,
-                all fields will be included. Valid options are: 'id', 'duration', 'type', 'analyst', 'severity',
-                'description', 'events'.
-            vendor: Optional. The vendor.
-            product: Optional. The product.
-            version: Optional. The version.
-            datetime_iso: Optional. The starting datetime_iso for the syslog messages. If not provided, a random time during
-            observables: An observables object. If not provided, random objservable will be generated and used.
-            required_fields: Optional. A list of fields that are required to present in the generated data, whether from
-            observables or randomely.
+            fields (str, optional): Comma-separated incident fields to include. If None, all fields are included.
+            vendor, product, version (Optional[str]): Details about the event source.
+            datetime_iso (Optional[datetime]): Base timestamp for the incidents.
+            observables (Optional[Observables]): Optional observables object to provide values.
+            required_fields (Optional[str]): Required fields for the events.
 
         Returns:
-            List[Dict]: A list of incident dictionaries. Each dictionary contains the following fields:
-                - 'id' (int): A unique identifier for the incident.
-                - 'type' (str): The type of incident.
-                - 'duration' (int): The duration of the incident in hours.
-                - 'analyst' (str): The name of the analyst assigned to the incident.
-                - 'severity' (str, optional): The severity of the incident. Only included if 'severity' is specified
-                    in the 'fields' argument.
-                - 'description' (str, optional): A brief description of the incident. Only included if 'description' is
-                    specified in the 'fields' argument.
-                - 'events' (List[Dict], optional): A list of event dictionaries associated with the incident.
-
-        Example:
-            >>> incidents(count=3, fields='id,type,severity')
-            [
-                {'id': 1, 'type': 'Lateral Movement', 'severity': 'Critical'},
-                {'id': 2, 'type': 'Access Violation', 'severity': 'High'},
-                {'id': 3, 'type': 'Account Compromised', 'severity': 'Low'}
-            ]
+            List[Dict]: A list of incident dictionaries.
         """
         incidents = []
-        faker = cls._create_faker()
+        faker =  Events.faker
+        datetime_iso = datetime_iso or datetime.now() - timedelta(hours=1)
 
-        incident_ids = set()
+        # Generate analyst list if not provided in observables
+        incident_types = observables.incident_types if observables and observables.incident_types else INCIDENTS_TYPES
+        analysts = observables.analysts if observables and observables.analysts else [faker.unique.first_name() for _ in range(10)]
 
-        incident_types = observables.incident_types if observables and observables.incident_types \
-            else INCIDENTS_TYPES
-        analysts = observables.analysts if observables and observables.analysts \
-            else [faker.unique.first_name() for _ in range(10)]
-        analyst_incident_map = {}
-        for analyst in analysts:
-            mapped_incident_type = incident_types.pop(0)
-            analyst_incident_map[analyst] = mapped_incident_type
-            incident_types.append(mapped_incident_type)
+        incident_type_cycle = itertools.cycle(incident_types)
         for i in range(count):
-            incident = {}
+            incident_id = i + 1  # Simplify unique ID generation
             duration = random.randint(1, 5)
-            while True:
-                incident_id = random.randint(1, count)
-                if incident_id not in incident_ids:
-                    incident_ids.add(incident_id)
-                    break
-            incident_type = random.choice(incident_types)
+            incident_type = next(incident_type_cycle)
             analyst = random.choice(analysts)
-            severity = random.choice(observables.severity) if observables and observables.severity \
-                else faker.random_int(min=1, max=5)
-            description = random.choice(observables.terms) if observables and observables.terms \
-                else Observables.generator(observable_type=ObservableType.TERMS, known=ObservableKnown.BAD, count=1000)
-            if analyst in analyst_incident_map and random.randint(1, 100) == 2:
-                incident_type = analyst_incident_map[analyst]
-                duration = random.randint(1, 2)
-            if fields:
-                field_list = fields.split(',')
-                if 'id' in field_list:
-                    incident['id'] = incident_id
-                if 'duration' in field_list:
-                    incident['duration'] = duration
-                if 'type' in field_list:
-                    incident['type'] = incident_type
-                if 'analyst' in field_list:
-                    incident['analyst'] = analyst
-                if 'severity' in field_list:
-                    incident['severity'] = severity
-                if 'description' in field_list:
-                    incident_description = faker.paragraph(nb_sentences=1, ext_word_list=description)
-                    incident['description'] = incident_description
-                if 'events' in field_list:
-                    incident['events'] = [
-                        {"event": cls.syslog(count=1, datetime_iso=datetime_iso, observables=observables,
-                                             required_fields=required_fields)[0]},
-                        {"event": cls.cef(count=1, datetime_iso=datetime_iso, vendor=vendor, product=product, version=version
-                                          , observables=observables, required_fields=required_fields)[0]},
-                        {"event": cls.leef(count=1, datetime_iso=datetime_iso, vendor=vendor, product=product,
-                                           version=version, observables=observables, required_fields=required_fields)[0]},
-                        {"event": cls.winevent(count=1, datetime_iso=datetime_iso, observables=observables)[0]},
-                        {"event": cls.json(count=1, datetime_iso=datetime_iso, vendor=vendor, product=product,
-                                           version=version, observables=observables,
-                                           required_fields=required_fields)[0]}
-                    ]
-            else:
-                incident = {
-                    "id": incident_id,
-                    "type": incident_type,
-                    "duration": duration,
-                    "analyst": analyst
-                }
+            severity = Events._set_field('severity', observables) or faker.random_int(min=1, max=5)
+            description = Events._set_field('terms', observables) or faker.sentence(nb_words=10)
+
+            # Add base fields
+            incident = {}
+            field_list = fields.split(',') if fields else ['id', 'duration', 'type', 'analyst', 'severity', 'description', 'events']
+            if 'id' in field_list:
+                incident['id'] = incident_id
+            if 'duration' in field_list:
+                incident['duration'] = duration
+            if 'type' in field_list:
+                incident['type'] = incident_type
+            if 'analyst' in field_list:
+                incident['analyst'] = analyst
+            if 'severity' in field_list:
+                incident['severity'] = severity
+            if 'description' in field_list:
+                incident['description'] = description
+
+            # Generate associated events for each incident
+            if 'events' in field_list:
+                incident['events'] = [
+                    {"event": cls.syslog(count=1, datetime_iso=datetime_iso, observables=observables, required_fields=required_fields)[0]},
+                    {"event": cls.cef(count=1, datetime_iso=datetime_iso, vendor=vendor, product=product, version=version, observables=observables, required_fields=required_fields)[0]},
+                    {"event": cls.leef(count=1, datetime_iso=datetime_iso, vendor=vendor, product=product, version=version, observables=observables, required_fields=required_fields)[0]},
+                    {"event": cls.winevent(count=1, datetime_iso=datetime_iso, observables=observables)[0]},
+                    {"event": cls.json(count=1, datetime_iso=datetime_iso, vendor=vendor, product=product, version=version, observables=observables, required_fields=required_fields)[0]}
+                ]
+            
             incidents.append(incident)
+
         return incidents

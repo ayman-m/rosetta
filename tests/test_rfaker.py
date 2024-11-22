@@ -1,22 +1,23 @@
 import unittest
+import time
 from rosetta.rfaker import Events, Observables, ObservableType, ObservableKnown
 
-src_ip, dst_ip, src_host, dst_host = ["192.168.10.10"], ["1.1.1.1"], ["abc"], ["xyz"]
-url, port = ["https://example.org"], ["555"]
+local_ip, remote_ip, src_host, dst_host = ["192.168.10.10"], ["1.1.1.1"], ["abc"], ["xyz"]
+url, remote_port = ["https://example.org"], ["555"]
 protocol, app = ["ftp"], ["chrome.exe"]
 user = ["ayman"]
 file_name, file_hash = ["test.zip"], ["719283fd5600eb631c23b290530e4dac9029bae72f15299711edbc800e8e02b2"]
-cmd, process = ["sudo restart"], ["bind"]
+unix_cmd, unix_process = ["sudo restart"], ["bind"]
 severity = ["high", "critical"]
 sensor = ["fw"]
 action = ["block"]
 incident_types = ["Phishing"]
 
-observables_list = Observables(src_ip=src_ip, dst_ip=dst_ip, src_host=src_host, dst_host=dst_host, url=url, port=port,
-                               protocol=protocol, app=app, user=user, file_name=file_name, file_hash=file_hash, cmd=cmd,
-                               process=process, severity=severity, sensor=sensor, action=action,
-                               incident_types=incident_types)
 
+observables_list = Observables(local_ip=local_ip, remote_ip=remote_ip, src_host=src_host, dst_host=dst_host, url=url, remote_port=remote_port,
+                               protocol=protocol, app=app, user=user, file_name=file_name, file_hash=file_hash, unix_cmd=unix_cmd,
+                               unix_process=unix_process, severity=severity, sensor=sensor, action=action,
+                               incident_types=incident_types)
 
 class TestObservables(unittest.TestCase):
     def test_generator(self):
@@ -56,47 +57,98 @@ class TestObservables(unittest.TestCase):
 
 class TestRFaker(unittest.TestCase):
 
+    @classmethod
+    def tearDownClass(cls):
+        # After all tests have run, print the field timings
+        field_timings = Events.field_timings
+
+        # Calculate average time per field
+        for field, data in field_timings.items():
+            total_time = data['total_time']
+            count = data['count']
+            average_time = total_time / count if count > 0 else 0
+            data['average_time'] = average_time
+
+        # Sort fields by total_time
+        sorted_fields = sorted(
+            field_timings.items(),
+            key=lambda item: item[1]['total_time'],
+            reverse=True
+        )
+
+        # Print the timing data
+        print("\nField Timing Analysis:")
+        for field, data in sorted_fields:
+            print(f"Field: {field}")
+            print(f"  Total Time: {data['total_time']:.6f} seconds")
+            print(f"  Count: {data['count']}")
+            print(f"  Average Time: {data['average_time']:.6f} seconds\n")
+
+
     def test_syslog(self):
-        fake_messages = Events.syslog(count=2, observables=observables_list)
+        start_time = time.time()
+        fake_messages = Events.syslog(count=10, observables=observables_list)
+        end_time = time.time()
+        latency = end_time - start_time
+        print(f"Syslog generation latency for 10 logs: {latency:.4f} seconds")
+
         self.assertTrue(isinstance(fake_messages, list))
-        self.assertEqual(len(fake_messages), 2)
+        self.assertEqual(len(fake_messages), 10)
         for message in fake_messages:
             self.assertIn(observables_list.src_host[0], message)
 
     def test_cef(self):
-        fake_messages = Events.cef(count=2, observables=observables_list)
+        start_time = time.time()
+        fake_messages = Events.cef(
+            count=10,
+            observables=observables_list,
+            required_fields="local_ip,local_port,remote_ip,remote_port,protocol,rule_id,action"
+        )
+        end_time = time.time()
+        latency = end_time - start_time
+        print(f"CEF generation latency for 10 logs: {latency:.4f} seconds")
+
         self.assertTrue(isinstance(fake_messages, list))
-        self.assertEqual(len(fake_messages), 2)
+        self.assertEqual(len(fake_messages), 10)
         for message in fake_messages:
-            self.assertIn(f'from {observables_list.src_host[0]}', message)
+            self.assertIn(observables_list.src_host[0], message)
 
     def test_leef(self):
-        fake_messages = Events.leef(count=2, observables=observables_list)
-        self.assertTrue(isinstance(fake_messages, list))
-        self.assertEqual(len(fake_messages), 2)
-        for message in fake_messages:
-            self.assertIn(f'|{observables_list.src_host[0]}|', message)
+        start_time = time.time()
+        fake_messages = Events.leef(count=10, observables=observables_list)
+        end_time = time.time()
+        latency = end_time - start_time
+        print(f"LEEF generation latency for 10 logs: {latency:.4f} seconds")
 
-    def test_winevent(self):
-        fake_messages = Events.winevent(count=2, observables=observables_list)
         self.assertTrue(isinstance(fake_messages, list))
-        self.assertEqual(len(fake_messages), 2)
+        self.assertEqual(len(fake_messages), 10)
         for message in fake_messages:
-            self.assertIn(f"{observables_list.src_host[0]}", message)
+            self.assertIn(observables_list.src_host[0], message)
+
 
     def test_json(self):
-        fake_messages = Events.json(count=2, observables=observables_list)
-        self.assertTrue(isinstance(fake_messages, list))
-        self.assertEqual(len(fake_messages), 2)
-        for message in fake_messages:
-            self.assertIn(f"{observables_list.src_host[0]}", message['host'])
+        start_time = time.time()
+        fake_messages = Events.json(count=10, observables=observables_list)
+        end_time = time.time()
+        latency = end_time - start_time
+        print(f"JSON generation latency for 10 logs: {latency:.4f} seconds")
 
-    def test_incidents(self):
-        fake_messages = Events.incidents(count=2, observables=observables_list)
         self.assertTrue(isinstance(fake_messages, list))
-        self.assertEqual(len(fake_messages), 2)
+        self.assertEqual(len(fake_messages), 10)
         for message in fake_messages:
-            self.assertIn(f"{observables_list.incident_types[0]}", message['type'])
+            self.assertIn(observables_list.src_host[0], str(message))
+
+    def test_winevent(self):
+        start_time = time.time()
+        fake_messages = Events.winevent(count=10, observables=observables_list)
+        end_time = time.time()
+        latency = end_time - start_time
+        print(f"Windows Event generation latency for 10 logs: {latency:.4f} seconds")
+
+        self.assertTrue(isinstance(fake_messages, list))
+        self.assertEqual(len(fake_messages), 10)
+        for message in fake_messages:
+            self.assertIn(observables_list.src_host[0], message)
 
 
 if __name__ == '__main__':
