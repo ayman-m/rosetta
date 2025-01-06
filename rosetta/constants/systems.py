@@ -104,7 +104,7 @@ WIN_EVENTS = [
     '<Data Name="SubjectDomainName">{src_domain}</Data><Data Name="SubjectLogonId">'
     '{user}</Data>'
     '<Data Name="NewProcessId">{new_process_id}</Data><Data Name="ProcessId">{process_id}</Data>'
-    '<Data Name="CommandLine">{cmd}</Data><Data Name="TargetUserSid">{user}</Data>'
+    '<Data Name="CommandLine">{win_cmd}</Data><Data Name="TargetUserSid">{user}</Data>'
     '<Data Name="TargetUserName">{user}</Data><Data Name="TargetDomainName">'
     '{src_domain}</Data>'
     '<Data Name="TargetLogonId">{user}</Data><Data Name="LogonType">3</Data></EventData></Event>',
@@ -142,5 +142,5 @@ WIN_EVENTS = [
     '<Data Name="NewProcessId">{new_process_id}</Data>'
     '<Data Name="CreatorProcessId">{process_id}</Data>'
     '<Data Name="TokenElevationType">TokenElevationTypeLimited (3)</Data>'
-    '<Data Name="ProcessCommandLine">{cmd}</Data>'
+    '<Data Name="ProcessCommandLine">{win_cmd}</Data>'
 ]
