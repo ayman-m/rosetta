@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 import time
 import threading
 import socket
@@ -8,6 +9,15 @@ from typing import Optional
 from urllib3.exceptions import InsecureRequestWarning
 
 from rosetta.rfaker import Observables, Events
+
+
+class WorkerTypeEnum(str, Enum):
+    SYSLOG = "SYSLOG"
+    CEF = "CEF"
+    LEEF = "LEEF"
+    WINEVENT = "WINEVENT"
+    JSON = "JSON"
+    INCIDENT = "INCIDENT"
 
 
 class Sender:
@@ -96,6 +106,8 @@ class Sender:
             self.headers = headers
         self.thread = None
         self.worker_name = worker_name
+        if isinstance(data_type, WorkerTypeEnum):
+            data_type = data_type.value
         self.data_type = data_type
         self.count = count
         self.interval = interval

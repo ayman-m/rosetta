@@ -1,6 +1,6 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: rosetta-ce
-Version: 1.7.4
+Version: 1.7.6
 Summary: Rosetta is a Python package that can be used to fake security logs and alerts for testing different detection and response use cases.
 Home-page: https://github.com/ayman-m/rosetta
 Author: Ayman Mahmoud
@@ -14,6 +14,16 @@ License-File: LICENSE
 Requires-Dist: requests
 Requires-Dist: faker
 Requires-Dist: urllib3
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
 
 [![snyk](https://snyk.io/test/github/ayman-m/rosetta/badge.svg)](https://snyk.io/test/github/my-soc/Rosetta)
 ![codeql](https://github.com/ayman-m/rosetta/actions/workflows/github-code-scanning/codeql/badge.svg)

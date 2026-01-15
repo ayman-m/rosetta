@@ -9,4 +9,8 @@ rm -rf build/ dist/ *.egg-info
 python3 setup.py sdist bdist_wheel
 
 # Upload to PyPI using twine
-twine upload dist/*
+set -a
+# Load PyPI token from .env (expects PYPI_TOKEN)
+. ./.env
+set +a
+python3 -m twine upload -u __token__ -p "$PYPI_TOKEN" dist/*
