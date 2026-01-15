@@ -1,34 +1,34 @@
 OS_LIST = [
-    "AIX 7.2",
-    "HP-UX 11i v3",
-    "Solaris 11",
-    "FreeBSD 13.2",
-    "OpenBSD 7.4",
-    "NetBSD 10.0",
-    "Ubuntu 22.04 LTS",
-    "Red Hat Enterprise Linux 9",
-    "CentOS 8",
-    "Debian 12",
-    "Fedora 38",
-    "Arch Linux 2024.09",
-    "Kali Linux 2024.1",
-    "Alpine Linux 3.18",
-    "SUSE Linux Enterprise Server 15 SP4",
-    "Windows 10 Pro",
-    "Windows 11 Home",
-    "Windows Server 2019",
-    "Windows Server 2022",
-    "Windows 8.1",
-    "Windows 7 SP1",
-    "macOS Ventura 13",
-    "macOS Monterey 12",
-    "macOS Big Sur 11",
-    "macOS Catalina 10.15",
-    "macOS Mojave 10.14",
-    "iOS 17",
-    "iPadOS 17",
-    "Android 14",
-    "HarmonyOS 3.1"
+    "AIX_7.2",
+    "HP-UX_11i_v3",
+    "Solaris_11",
+    "FreeBSD_13.2",
+    "OpenBSD_7.4",
+    "NetBSD_10.0",
+    "Ubuntu_22.04_LTS",
+    "Red_Hat_Enterprise_Linux_9",
+    "CentOS_8",
+    "Debian_12",
+    "Fedora_38",
+    "Arch_Linux_2024.09",
+    "Kali_Linux_2024.1",
+    "Alpine_Linux_3.18",
+    "SUSE_Linux_Enterprise_Server_15_SP4",
+    "Windows_10_Pro",
+    "Windows_11_Home",
+    "Windows_Server_2019",
+    "Windows_Server_2022",
+    "Windows_8.1",
+    "Windows_7_SP1",
+    "macOS_Ventura_13",
+    "macOS_Monterey_12",
+    "macOS_Big_Sur_11",
+    "macOS_Catalina_10.15",
+    "macOS_Mojave_10.14",
+    "iOS_17",
+    "iPadOS_17",
+    "Android_14",
+    "HarmonyOS_3.1"
 ]
 UNIX_CMD = [
     "cat /etc/shadow",
@@ -104,7 +104,7 @@ WIN_EVENTS = [
     '<Data Name="SubjectDomainName">{src_domain}</Data><Data Name="SubjectLogonId">'
     '{user}</Data>'
     '<Data Name="NewProcessId">{new_process_id}</Data><Data Name="ProcessId">{process_id}</Data>'
-    '<Data Name="CommandLine">{cmd}</Data><Data Name="TargetUserSid">{user}</Data>'
+    '<Data Name="CommandLine">{win_cmd}</Data><Data Name="TargetUserSid">{user}</Data>'
     '<Data Name="TargetUserName">{user}</Data><Data Name="TargetDomainName">'
     '{src_domain}</Data>'
     '<Data Name="TargetLogonId">{user}</Data><Data Name="LogonType">3</Data></EventData></Event>',
@@ -142,5 +142,5 @@ WIN_EVENTS = [
     '<Data Name="NewProcessId">{new_process_id}</Data>'
     '<Data Name="CreatorProcessId">{process_id}</Data>'
     '<Data Name="TokenElevationType">TokenElevationTypeLimited (3)</Data>'
-    '<Data Name="ProcessCommandLine">{cmd}</Data>'
+    '<Data Name="ProcessCommandLine">{win_cmd}</Data>'
 ]

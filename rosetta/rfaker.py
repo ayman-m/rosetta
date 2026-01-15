@@ -837,6 +837,7 @@ class Events:
         # Generate analyst list if not provided in observables
         incident_types = observables.incident_types if observables and observables.incident_types else INCIDENTS_TYPES
         analysts = observables.analysts if observables and observables.analysts else [faker.unique.first_name() for _ in range(10)]
+        severities = observables.severity if observables and observables.severity else [faker.random_int(min=1, max=5) for _ in range(10)]
 
         incident_type_cycle = itertools.cycle(incident_types)
         for i in range(count):
@@ -844,8 +845,8 @@ class Events:
             duration = random.randint(1, 5)
             incident_type = next(incident_type_cycle)
             analyst = random.choice(analysts)
-            severity = Events._set_field('severity', observables) or faker.random_int(min=1, max=5)
-            description = Events._set_field('terms', observables) or faker.sentence(nb_words=10)
+            severity =  random.choice(severities)
+            description = Events._set_field('terms')
 
             # Add base fields
             incident = {}

@@ -150,5 +150,15 @@ class TestRFaker(unittest.TestCase):
             self.assertIn(observables_list.src_host[0], message)
 
 
+    def test_incident(self):
+        start_time = time.time()
+        fake_messages = Events.incidents(count=10)
+        end_time = time.time()
+        latency = end_time - start_time
+        print(f"Incident generation latency for 10 logs: {latency:.4f} seconds")
+
+        self.assertTrue(isinstance(fake_messages, list))
+        self.assertEqual(len(fake_messages), 10)
+
 if __name__ == '__main__':
     unittest.main()
