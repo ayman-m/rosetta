@@ -1,4 +1,5 @@
 import unittest
+import warnings
 from unittest.mock import patch
 from rosetta.rsender import Sender, WorkerTypeEnum
 from rosetta.rfaker import Observables
@@ -21,6 +22,14 @@ observables_list = Observables(local_ip=local_ip, remote_ip=remote_ip, src_host=
 
 
 class TestRSender(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls._warnings_filters = warnings.filters[:]
+        warnings.filterwarnings("ignore", category=UserWarning, module="rosetta.rfaker")
+
+    @classmethod
+    def tearDownClass(cls):
+        warnings.filters = cls._warnings_filters
 
     def setUp(self):
         self.worker = Sender(
@@ -34,11 +43,13 @@ class TestRSender(unittest.TestCase):
     def tearDown(self):
         self.worker.stop()
 
-    def test_start(self):
+    @patch('rosetta.rsender.Sender.send_data')
+    def test_start(self, mock_send_data):
         self.worker.start()
         self.assertEqual(self.worker.status, 'Running')
 
-    def test_stop(self):
+    @patch('rosetta.rsender.Sender.send_data')
+    def test_stop(self, mock_send_data):
         self.worker.start()
         self.worker.stop()
         self.assertEqual(self.worker.status, 'Stopped')

@@ -4,121 +4,434 @@
 
 # Rosetta
 
-Rosetta is a Python package that can be used to fake security logs and alerts for testing different detection and response use cases. It provides the following functions:
-- Generate bad and random observables/indicators that include IP Addresses, Urls, File hashes , CVE's and more
-- Fake log messages in different formats like CEF, LEEF and JSON.
-- Convert one log format into another, for example from CEF to LEEF.
-- Send the fake log message to different log management and analytics tools.
+Rosetta is a Python library for generating realistic security telemetry and alerts at scale. It can:
+- Generate observables/indicators (IPs, URLs, hashes, CVEs, MITRE ATT&CK techniques)
+- Emit synthetic logs in multiple formats (SYSLOG, CEF, LEEF, JSON, Windows Event XML)
+- Produce incident bundles composed of multiple event types
+- Convert one log format to another (e.g., CEF to JSON/LEEF)
+- Send synthetic logs to TCP/UDP/HTTP/HTTPS endpoints
+- Validate fields against a schema and generate missing values heuristically
+- Simulate database queries including SQL injection patterns
+- Generate Kubernetes and cloud-native telemetry
 
 ## Installation
 
-- You can install rosetta via pip:
+- Install from PyPI:
 ```sh
 pip install rosetta-ce
 ```
-- Or you can install it from the source code:
+- Install from source:
 ```sh
 git clone https://github.com/ayman-m/rosetta.git
 cd rosetta
 python setup.py install
 ```
-- Once installed, you can import the library in your Python code like this:
+
+## Quick start
+
 ```python
-from rosetta import Observables, Events
+from rosetta import Events, Observables, ObservableType, ObservableKnown
+
+# Generate observables
+bad_ips = Observables.generator(count=3, observable_type=ObservableType.IP, known=ObservableKnown.BAD)
+
+# Inject custom observables and extra fields
+observables = Observables(
+    src_host=["web-01"],
+    user=["alex"],
+    url=["https://example.org"],
+    custom_field=["custom_value"],
+)
+
+# Create events in different formats
+syslog_events = Events.syslog(count=2, observables=observables)
+cef_events = Events.cef(count=2, observables=observables)
+leef_events = Events.leef(count=2, observables=observables)
+json_events = Events.json(count=2, observables=observables)
+win_events = Events.winevent(count=2, observables=observables)
 ```
 
-## Usage
-Here are some examples of how to use Rosetta:
+## Observables
+
+### Observable types
+
+| Type | Description | Known Values |
+|------|-------------|--------------|
+| `IP` | IPv4 addresses | BAD (malicious), GOOD (benign) |
+| `URL` | Web URLs | BAD (malicious), GOOD (benign) |
+| `SHA256` | File hashes | BAD (malicious), GOOD (benign) |
+| `CVE` | CVE identifiers | N/A |
+| `TERMS` | MITRE ATT&CK techniques (280+ IDs) | N/A |
+
+### Fetch or generate indicators
 ```python
-from rosetta import Converter, ConverterToEnum, ConverterFromEnum, Events, ObservableType, ObservableKnown, \
-    Observables, Sender
+from rosetta import Observables, ObservableType, ObservableKnown
 
-# Example usage of the Converter class to convert a CEF log into a LEEF log.
-converted_log = Converter.convert(from_type=ConverterFromEnum.CEF, to_type=ConverterToEnum.LEEF,
-                                  data="cef_log=CEF:0|Security|Intrusion Detection System|1.0|Alert|10|src=192.168.0.1 dst=192.168.0.2 act=blocked")
-print(
-    converted_log)  # {'message': 'converted', 'data': 'LEEF=1.0!Vendor=Security!Product=Intrusion Detection System!Version=1.0!EventID=Alert!Name=10!src=192.168.0.1!dst=192.168.0.2!act=blocked'}
-
-# Example usage of the Observables class to generate bad IP indicators.
-bad_ip = Observables.generator(count=2, observable_type=ObservableType.IP, known=ObservableKnown.BAD)
-print(bad_ip)  # ['ip1', 'ip2']
-
-# Example usage of the Observables class to generate good IP indicators.
-good_ip = Observables.generator(count=2, observable_type=ObservableType.IP, known=ObservableKnown.GOOD)
-print(good_ip)  # ['ip1', 'ip2']
-
-# Example usage of the Observables class to generate bad URL indicators.
-bad_url = Observables.generator(count=2, observable_type=ObservableType.URL, known=ObservableKnown.BAD)
-print(bad_url)  # ['url1', 'url2']
-
-# Example usage of the Observables class to generate good URL indicators.
-good_url = Observables.generator(count=2, observable_type=ObservableType.URL, known=ObservableKnown.GOOD)
-print(good_url)  # ['url1', 'url2']
-
-# Example usage of the Observables class to generate bad Hash indicators.
-bad_hash = Observables.generator(count=2, observable_type=ObservableType.SHA256, known=ObservableKnown.BAD)
-print(bad_hash)  # ['hash1', 'hash2']
-
-# Example usage of the Observables class to generate good Hash indicators.
-good_hash = Observables.generator(count=2, observable_type=ObservableType.SHA256, known=ObservableKnown.GOOD)
-print(good_hash)  # ['hash1', 'hash2']
-
-# Example usage of the Observables class to generate CVE indicators.
-cve = Observables.generator(count=2, observable_type=ObservableType.CVE)
-print(cve)  # Example: ['CVE-2023-2136', 'CVE-2023-29582']
-
-# Example usage of the Observables class to generate random Terms.
+bad_urls = Observables.generator(count=2, observable_type=ObservableType.URL, known=ObservableKnown.BAD)
+good_hashes = Observables.generator(count=2, observable_type=ObservableType.SHA256, known=ObservableKnown.GOOD)
+cves = Observables.generator(count=2, observable_type=ObservableType.CVE)
 terms = Observables.generator(count=2, observable_type=ObservableType.TERMS)
-print(terms)  # Example: ['Create or Modify System Process', 'Stage Capabilities: Drive-by Target']
-
-
-# You can create an instance of the Observables class to contain your own observables that are to be used in the fake security events
-src_ip, dst_ip, src_host, dst_host = ["192.168.10.10", "192.168.10.20"], ["1.1.1.1", "1.1.1.2"], ["abc"], ["xyz", "wlv"]
-url, port = ["https://example.org", "https://wikipedia.com"], ["555", "666"]
-protocol, app = ["ftp", "dns", "ssl"], ["explorer.exe", "chrome.exe"]
-user = ["ayman", "mahmoud"]
-file_name, file_hash = ["test.zip", "image.ps"], ["719283fd5600eb631c23b290530e4dac9029bae72f15299711edbc800e8e02b2"]
-cmd, process = ["sudo restart", "systemctl stop firewalld"], ["bind", "crond"]
-severity = ["high", "critical"]
-sensor = ["fw", "edr"]
-action = ["block", "allow"]
-observables_list = Observables(src_ip=src_ip, dst_ip=dst_ip, src_host=src_host, dst_host=dst_host, url=url, port=port,
-                               protocol=protocol, app=app, user=user, file_name=file_name, file_hash=file_hash, cmd=cmd,
-                               process=process, severity=severity, sensor=sensor, action=action)
-
-# Example usage of the Events class to generate generic SYSLOG events.
-generic_syslog_with_random_observables = Events.syslog(count=1)
-print(generic_syslog_with_random_observables)  # ['Jan 20 16:04:53 db-88.zuniga.net sudo[34675]: ryansandy : COMMAND ; iptables -F']
-generic_syslog_with_my_observables = Events.syslog(count=1, observables=observables_list)
-print(generic_syslog_with_my_observables)  # ['Apr 07 10:21:43 abc crond[17458]: ayman : COMMAND ; sudo restart']
-
-
-# Example usage of the Events class to generate CEF events.
-generic_cef_with_my_observables = Events.cef(count=1, observables=observables_list)
-print(generic_cef_with_my_observables)  # ['CEF:0|Novak LLC|Firewall|1.0.6|3019ab69-2d0e-4b3f-a240-4e8c93042dc3|Firewall allow dns traffic from abc:33504 to 1.1.1.1:666|5|src=abc spt=33504 dst=1.1.1.1 url=https://example.org dpt=666 proto=dns act=allow']
-
-
-leef_with_my_observables = Events.leef(count=1, observables=observables_list)
-print(leef_with_my_observables)  # ["LEEF:1.0|Leef|Payment Portal|1.0|210.12.108.86|abc|9a:1e:9d:00:4c:ba|3b:a0:4b:24:f7:59|src=192.168.10.10 dst=abc spt=61549 dpt=443 request=https://example.com/search.php?q=<script>alert('xss')</script> method=Web-GET proto=HTTP/1.1 status=500 hash=719283fd5600eb631c23b290530e4dac9029bae72f15299711edbc800e8e02b2request_size=6173 response_size=8611 user_agent=Mozilla/5.0 (iPhone; CPU iPhone OS 9_3_5 like Mac OS X) AppleWebKit/536.1 (KHTML, like Gecko) FxiOS/12.1s4879.0 Mobile/00Y135 Safari/536.1"]
-
-winevent_with_my_observables = Events.winevent(count=1, observables=observables_list)
-print(winevent_with_my_observables)  # ['<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><System><Provider Name="Microsoft-Windows-Security-Auditing" Guid="5fc4a88c-97b0-4061-adc3-052159c10ef4"/><EventID>4648</EventID><Version>0</Version><Level>0</Level><Task>13824</Task><Opcode>0</Opcode><Keywords>0x8020000000000000</Keywords><TimeCreated SystemTime="2023-04-07T18:45:17"/><EventRecordID>575</EventRecordID><Correlation/><Execution ProcessID="1071" ThreadID="5317" Channel="Security"/><Computer>abc</Computer><Security UserID="S-1-2915"/><EventData><Data Name="SubjectUserSid">S-1-2915</Data><Data Name="SubjectUserName">mahmoud</Data><Data Name="SubjectDomainName">johnson.org</Data><Data Name="SubjectLogonId">S-1-2915</Data><Data Name="NewProcessId">3371</Data><Data Name="ProcessId">1071</Data><Data Name="CommandLine">sudo restart</Data><Data Name="TargetUserSid">S-1-2915</Data><Data Name="TargetUserName">mahmoud</Data><Data Name="TargetDomainName">johnson.org</Data><Data Name="TargetLogonId">S-1-2915</Data><Data Name="LogonType">3</Data></EventData></Event>']
-
-json_with_my_observables = Events.json(count=1, observables=observables_list)
-print(json_with_my_observables) # [{'event_type': 'vulnerability_discovered', 'timestamp': '2023-02-12T16:28:46', 'severity': 'high', 'host': 'abc', 'file_hash': '719283fd5600eb631c23b290530e4dac9029bae72f15299711edbc800e8e02b2', 'cve': ['CVE-3941-1955']}]
-
-incident_with_my_observables = Events.incidents(count=1, fields="id,type,duration,analyst,description,events", observables=observables_list)
-print(incident_with_my_observables) # [{'id': 1, 'duration': 2, 'type': 'Lateral Movement', 'analyst': 'Elizabeth', 'description': 'Software Discovery Forge Web Credentials: SAML Tokens Escape to Host System Binary Proxy Execution: Control Panel Hide Artifacts: Process Argument Spoofing Office Application Startup: Add-ins Compromise Infrastructure: Botnet.', 'events': [{'event': 'Apr 09 19:39:57 abc bind[56294]: ayman : COMMAND ; systemctl stop firewalld'}, {'event': 'CEF:0|Todd, Guzman and Morales|Firewall|1.0.4|afe3d30f-cff4-4084-a7a3-7de9ea21d0e9|Firewall block dns traffic from abc:26806 to 1.1.1.1:555|10|src=abc spt=26806 dst=1.1.1.1 url=https://example.org dpt=555 proto=dns act=block'}, {'event': 'LEEF:1.0|Leef|Payment Portal|1.0|19.90.247.108|abc|d4:27:4c:a7:40:50|2a:3f:f3:37:81:eb|src=192.168.10.20 dst=abc spt=47335 dpt=443 request=https://example.com/index.php method=Web-GET proto=HTTP/1.1 status=500 hash=719283fd5600eb631c23b290530e4dac9029bae72f15299711edbc800e8e02b2request_size=3640 response_size=4766 user_agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_5_1) AppleWebKit/533.0 (KHTML, like Gecko) Chrome/47.0.819.0 Safari/533.0'}, {'event': '<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><System><Provider Name="Microsoft-Windows-Security-Auditing" Guid="67eb0bb0-ab24-43ce-b7f1-6d6a6bb0ac27"/><EventID>4672</EventID><Version>0</Version><Level>0</Level><Task>12544</Task><Opcode>0</Opcode><Keywords>0x8020000000000000</Keywords><TimeCreated SystemTime="2023-01-15T04:07:58"/><EventRecordID>38</EventRecordID><Correlation/><Execution ProcessID="7182" ThreadID="7703" Channel="Security"/><Computer>abc</Computer><Security UserID="S-1-7181"/><EventData><Data Name="SubjectUserSid">S-1-7181</Data><Data Name="SubjectUserName">mahmoud</Data><Data Name="SubjectDomainName">johnson.net</Data><Data Name="SubjectLogonId">9638</Data><Data Name="PrivilegeList">Through moment tonight.</Data></EventData></Event>'}, {'event': {'event_type': 'vulnerability_discovered', 'timestamp': '2023-01-18T23:49:45', 'severity': 'critical', 'host': 'abc', 'file_hash': '719283fd5600eb631c23b290530e4dac9029bae72f15299711edbc800e8e02b2', 'cve': ['CVE-2023-29067']}}]}]
-
-# Example usage of the Sender class to send faked events to log analysis tool.
-worker = Sender(data_type="SYSLOG", destination="udp:127.0.0.1:514", observables=observables_list, count=5, interval=2)
-worker.start()
-
-# Starting worker: worker_2023-04-26 17:50:15.671101
-# Worker: worker_2023-04-26 17:50:15.671101 sending log message to 127.0.0.1 
-# Worker: worker_2023-04-26 17:50:15.671101 sending log message to 127.0.0.1 
-# Worker: worker_2023-04-26 17:50:15.671101 sending log message to 127.0.0.1 
-# Worker: worker_2023-04-26 17:50:15.671101 sending log message to 127.0.0.1 
-# Worker: worker_2023-04-26 17:50:15.671101 sending log message to 127.0.0.1 
-
 ```
+
+### Provide your own observables
+`Observables` accepts known fields and arbitrary extra fields via `**kwargs`.
+```python
+from rosetta import Observables
+
+observables = Observables(
+    local_ip=["192.168.10.10"],
+    remote_ip=["1.1.1.1"],
+    src_host=["abc"],
+    dst_host=["xyz"],
+    user=["ayman"],
+    file_name=["test.zip"],
+    custom_field=["custom_value"],
+)
+```
+
+### Built-in observable fields
+
+| Category | Fields |
+|----------|--------|
+| Network (IPv4/IPv6) | `local_ip`, `remote_ip`, `local_ip_v6`, `remote_ip_v6`, `local_port`, `remote_port`, `protocol` |
+| Hosts & Domains | `src_host`, `dst_host`, `src_domain`, `dst_domain`, `url` |
+| Users & Email | `user`, `sender_email`, `recipient_email`, `email_subject`, `email_body` |
+| Files | `file_name`, `file_hash` |
+| Processes | `win_process`, `win_child_process`, `unix_process`, `unix_child_process`, `win_cmd`, `unix_cmd` |
+| Security | `severity`, `action`, `event_id`, `error_code`, `technique`, `cve`, `terms` |
+| Alerts & Incidents | `alert_types`, `alert_name`, `incident_types`, `analysts`, `action_status` |
+| Database | `query_type`, `database_name`, `query` |
+| Other | `app`, `os`, `sensor`, `entry_type`, `inbound_bytes`, `outbound_bytes` |
+
+## Events
+
+Rosetta supports generating events in multiple industry-standard log formats:
+
+| Format | Description | Use Case |
+|--------|-------------|----------|
+| **SYSLOG** | RFC 5424 syslog format | Unix/Linux system logs, network devices |
+| **CEF** | Common Event Format | SIEM integration (ArcSight, Splunk) |
+| **LEEF** | Log Event Extended Format | IBM QRadar integration |
+| **JSON** | Structured JSON format | Modern SIEM, Elasticsearch, cloud platforms |
+| **Windows Event XML** | Windows Event Log format | Windows security monitoring, Sysmon |
+| **Incidents** | Bundled multi-format events | Incident response testing, SOC training |
+
+### SYSLOG
+```python
+from rosetta import Events
+
+Events.syslog(count=1)
+Events.syslog(count=1, observables=observables)
+```
+
+### CEF
+```python
+Events.cef(count=1, observables=observables)
+Events.cef(count=1, observables=observables, required_fields="local_ip,local_port,remote_ip,remote_port,protocol,rule_id,action")
+```
+
+### LEEF
+```python
+Events.leef(count=1, observables=observables)
+```
+
+### Windows Event Log (XML)
+```python
+Events.winevent(count=1, observables=observables)
+```
+
+### JSON
+```python
+Events.json(count=1, observables=observables)
+```
+
+### Incidents (bundled events)
+```python
+Events.incidents(count=1, fields="id,type,duration,analyst,description,events", observables=observables)
+```
+
+### Supported incident types
+Rosetta includes 11 predefined incident categories:
+- Malware
+- Phishing
+- Access Violation
+- Lateral Movement
+- Port Scan
+- SQL Injection
+- Brute Force
+- Control Avoidance
+- Rogue Device
+- Denial of Service
+- Account Compromised
+
+## Required fields and presets
+
+Rosetta can require specific fields per event. You can pass `required_fields` directly, or rely on presets.
+
+- Preset file: `rosetta/schema/required_presets.json`
+- Keys: `syslog`, `cef`, `leef`, `json`, `winevent`
+
+```python
+# Explicit override
+Events.syslog(count=1, required_fields="timestamp,hostname,username")
+
+# Use presets (default behavior)
+Events.syslog(count=1)
+```
+
+If the preset file is missing or empty, Rosetta falls back to built-in defaults.
+
+## Schema validation
+
+Rosetta checks required fields and observables against a supported-fields list and emits warnings for unknown fields.
+
+- Schema file: `rosetta/schema/supported_fields.json`
+- Behavior: non-blocking warnings only
+
+```python
+from rosetta import Events, Observables
+
+Events.syslog(count=1, observables=Observables(), required_fields="unknown_field")
+# Warning: Field 'unknown_field' is not in schema/supported_fields.json
+```
+
+### Supported schema fields (1000+ fields)
+
+<details>
+<summary>Click to expand full field list by category</summary>
+
+#### Identity & Authentication
+`username`, `user`, `user_id`, `user_sid`, `user_dn`, `user_ou`, `user_type`, `user_role`, `user_group`, `actor_username`, `actor_sid`, `actor_id`, `actor_uid`, `actor_arn`, `actor_ip`, `target_username`, `target_user_sid`, `target_user_id`, `target_uid`, `admin_username`, `admin_ip`, `analyst_username`, `creator_username`, `creator_ip`, `display_name`, `full_name`, `email`, `department`, `title`, `manager`
+
+#### Authentication & Sessions
+`authentication_method`, `authentication_result`, `authentication_package`, `authentication_status`, `authorization_status`, `session_id`, `session_type`, `session_start`, `session_end`, `session_duration`, `session_timeout`, `token_id`, `token_expiry`, `token_elevation_type`, `mfa_method`, `mfa_result`, `logon_type`, `logon_process`, `logon_guid`, `logon_id`, `logon_time`, `logoff_time`, `login_type`, `login_time`, `last_login`, `last_logon`, `last_password_change`
+
+#### Network & Connectivity
+`client_ip`, `client_port`, `client_hostname`, `client_mac`, `server_ip`, `server_port`, `server_hostname`, `source_ip`, `source_port`, `source_mac`, `source_hostname`, `destination_ip`, `destination_port`, `destination_mac`, `destination_hostname`, `local_ip`, `local_port`, `remote_ip`, `remote_port`, `remote_host`, `assigned_ip`, `public_ip`, `private_ip`, `nat_source_ip`, `nat_destination_ip`, `scanner_ip`, `target_ip`, `target_port`, `target_hostname`
+
+#### DNS & DHCP
+`dns_server`, `dns_servers`, `dns_query`, `dns_response`, `dns_flags`, `dns_name`, `dnssec_validated`, `query_name`, `query_class`, `query_time_ms`, `query_count`, `response_data`, `response_ip`, `response_count`, `response_ttl`, `authoritative`, `recursion_desired`, `recursion_available`, `dhcp_*`, `lease_duration`, `lease_start`, `lease_expiry`, `lease_state`, `scope_name`, `scope_id`
+
+#### HTTP & Web
+`http_method`, `http_uri`, `http_host`, `http_status_code`, `http_protocol`, `http_referer`, `http_user_agent`, `http_query_string`, `request_id`, `request_size`, `request_body_sample`, `request_headers`, `response_code`, `response_size`, `response_time_ms`, `response_body_sample`, `response_headers`, `content_type`, `content_length`, `user_agent`, `referer`, `cookie`, `cookies`, `url`, `url_category`, `url_categories`
+
+#### API Gateway
+`gateway_name`, `api_key`, `api_name`, `api_endpoint`, `api_operation`, `api_version`, `api_parameters`, `api_call`, `oauth_client_id`, `oauth_scope`, `rate_limit_policy`, `rate_limit_remaining`, `quota_policy`, `quota_remaining`, `backend_server`, `backend_response_time_ms`, `backend_status_code`, `cache_status`, `cache_hit`
+
+#### Files & Storage
+`file_name`, `file_path`, `file_type`, `file_size`, `file_hash`, `file_hash_md5`, `file_hash_sha1`, `file_hash_sha256`, `file_hash_imphash`, `file_owner`, `file_group`, `file_permissions`, `file_attributes`, `file_version`, `original_filename`, `creation_time`, `modification_time`, `deletion_time`, `access_time`, `old_hash`, `new_hash`, `old_size`, `new_size`, `old_permissions`, `new_permissions`
+
+#### Processes & Execution
+`process_id`, `process_name`, `process_guid`, `parent_process_name`, `parent_process_guid`, `parent_command_line`, `parent_image`, `pid`, `ppid`, `executable_path`, `command_line`, `command`, `arguments`, `args`, `working_directory`, `cwd`, `image`, `image_path`, `image_loaded`, `start_time`, `stop_time`, `exit_code`, `cpu_time`, `thread_count`, `handle_count`
+
+#### Windows Events
+`event_id`, `event_type`, `event_record_id`, `event_category`, `logon_id`, `linked_logon_id`, `virtual_account`, `elevated_token`, `mandatory_label`, `integrity_level`, `terminal_session_id`, `current_directory`, `source_pid`, `source_process_name`, `source_image`, `source_user`, `target_pid`, `target_process_name`, `target_image`, `granted_access`, `call_trace`
+
+#### Registry
+`registry_key`, `registry_value_name`, `registry_value_type`, `registry_value_data`, `old_value_type`, `old_value_data`, `new_value_type`, `new_value_data`, `target_object`, `details`, `new_name`
+
+#### Services & Scheduled Tasks
+`service_name`, `service_type`, `service_state`, `service_path`, `service_file_name`, `service_start_type`, `service_unit`, `service_account`, `task_name`, `task_content`, `task_id`, `task_status`, `task_result`, `trigger_type`, `trigger_value`, `run_level`, `enabled`, `schedule`, `last_run_time`, `next_run_time`
+
+#### Modules & Drivers
+`module_name`, `module_path`, `module_base_address`, `module_size`, `module_version`, `module_parameters`, `module_hash`, `driver_name`, `signature_status`, `signature_level`, `signed`, `signed_by`, `signer`, `load_reason`, `load_result`, `load_address`, `load_time`, `is_kernel_mode`
+
+#### PowerShell & Scripts
+`script_block_text`, `script_path`, `script_content`, `script_hash`, `script_content_hash`, `script_block_id`, `script_engine`, `host_application`, `engine_version`, `runspace_id`, `pipeline_id`, `interpreter`, `obfuscation_score`
+
+#### Containers & Kubernetes
+`container_id`, `container_name`, `container_image`, `namespace`, `pod_name`, `pod_uid`, `node_name`, `cluster`, `labels`, `annotations`, `resource_limits`, `security_context`, `service_account`, `restart_count`, `exit_code_previous`, `environment_variables`, `cgroup`, `namespace_pid`, `capabilities`
+
+#### Cloud & Infrastructure
+`cloud_provider`, `region`, `instance_id`, `instance_name`, `instance_type`, `ami_id`, `vpc_id`, `subnet_id`, `security_groups`, `iam_role`, `resource_type`, `resource_id`, `resource_name`, `resource_arn`, `bucket_name`, `bucket_arn`, `volume_id`, `volume_name`, `volume_type`, `volume_size`, `snapshot_id`, `snapshot_name`, `tags`
+
+#### Virtual Machines
+`hypervisor_type`, `vm_id`, `vm_name`, `vm_uuid`, `cpu_usage`, `memory_usage`, `cpu_count`, `memory_mb`, `disk_size_gb`, `network_adapters`, `template_name`, `resource_pool`, `datastore`, `target_vm`, `target_host`, `boot_time_ms`, `uptime_seconds`, `previous_state`
+
+#### Database
+`database_name`, `database_role`, `query_type`, `query_text`, `query`, `command_type`, `command_text`, `object_name`, `schema_name`, `execution_status`, `execution_time_ms`, `affected_rows`, `transaction_id`, `privilege`, `error_code`, `error_message`
+
+#### Email & Messaging
+`sender`, `recipient`, `sender_email`, `recipient_email`, `sender_domain`, `recipient_domain`, `subject`, `message_id`, `message_size`, `message_count`, `attachment_name`, `attachment_type`, `attachment_size`, `attachment_hash`, `attachment_count`, `attachment_names`, `attachment_types`, `attachment_hashes`, `spam_score`, `phishing_score`, `spf_result`, `dkim_result`, `dmarc_result`
+
+#### Firewall & Network Security
+`firewall_name`, `rule_id`, `rule_name`, `rule_type`, `rule_number`, `rule_action`, `acl_name`, `acl_type`, `action`, `action_taken`, `zone_source`, `zone_destination`, `interface_in`, `interface_out`, `input_interface`, `output_interface`, `source_network`, `destination_network`, `port_range`, `tcp_flags`, `packets`, `bytes`, `bytes_sent`, `bytes_received`
+
+#### IDS/IPS & Threat Detection
+`signature_id`, `signature_name`, `signature_category`, `attack_type`, `attack_vector`, `attack_category`, `attack_severity`, `threat_type`, `threat_name`, `threat_category`, `threat_score`, `threat_level`, `threat_severity`, `threat_indicator`, `threat_detected`, `detection_name`, `detection_type`, `mitre_tactic`, `mitre_technique`, `cve_id`, `cvss_score`, `cvss_vector`
+
+#### Endpoint Detection
+`agent_id`, `agent_version`, `scan_id`, `scan_type`, `scan_result`, `scan_status`, `scan_start`, `scan_end`, `scan_duration`, `finding_id`, `vulnerability_id`, `vulnerability_name`, `vulnerability_description`, `remediation`, `quarantine_id`, `quarantine_status`, `quarantine_path`, `quarantined`, `blocked`
+
+#### SIEM & Incident Response
+`incident_id`, `incident_name`, `incident_type`, `incident_severity`, `incident_status`, `alert_id`, `alert_type`, `alert_name`, `playbook_id`, `playbook_name`, `analyst_notes`, `confidence`, `risk_score`, `risk_level`, `severity`, `priority`
+
+#### SSL/TLS
+`ssl_protocol`, `ssl_version`, `ssl_cipher`, `ssl_subject`, `ssl_issuer`, `ssl_client_cert_cn`, `ssl_ja3_hash`, `ssl_ja3s_hash`, `tls_version`, `tls_cipher`, `cipher_suite`, `certificate_cn`, `certificate_serial`, `certificate_issuer`, `certificate_subject`, `certificate_validity_start`, `certificate_validity_end`, `certificate_chain_valid`, `certificate_revocation_status`, `ja3_hash`, `ja3s_hash`
+
+#### VPN & Remote Access
+`vpn_group`, `tunnel_type`, `tunnel_id`, `encryption_algorithm`, `idle_timeout`, `session_timeout`, `bytes_quota`, `client_version`
+
+#### Wireless
+`ssid`, `ap_name`, `ap_mac`, `bssid`, `eap_type`, `vlan_assigned`, `radio_type`, `channel`, `rssi`, `snr`, `roam_count`, `association_time`, `data_rate`, `power_save_mode`
+
+#### Network Access Control
+`identity_group`, `policy_matched`, `nas_ip`, `nas_port`, `calling_station_id`, `called_station_id`, `radius_attributes`, `switch_ip`, `switch_port`, `vlan_id`, `vlan_name`, `posture_status`, `endpoint_policy`
+
+#### Data Loss Prevention
+`data_classification`, `sensitive_data_flag`, `sensitive_data_types`, `sensitive_data_detected`, `sensitive_data_added`, `sensitive_data_removed`, `pattern_matched`, `bytes_inspected`, `dlp_verdict`, `dlp_violation`, `dlp_scan_result`, `masked_fields`, `channel_type`
+
+#### Vulnerability Management
+`scanner_ip`, `target_os`, `target_os_version`, `service_detected`, `service_version`, `banner`, `vulnerability_checks`, `vulnerabilities_found`, `vulnerabilities_critical`, `vulnerabilities_high`, `vulnerabilities_medium`, `vulnerabilities_low`, `vulnerabilities_info`, `compliance_score`, `exploit_available`, `patch_available`, `first_detected`, `last_detected`
+
+#### Mobile Device Management
+`device_type`, `device_id`, `device_name`, `enrollment_status`, `enrollment_method`, `enrollment_time`, `serial_number`, `imei`, `jailbreak_status`, `passcode_compliant`, `installed_apps_count`, `managed_apps_count`, `certificates_installed`, `profiles_installed`
+
+#### Privileged Access Management
+`vault_name`, `checkout_id`, `checkout_reason`, `checkout_time`, `checkin_time`, `session_duration_limit`, `recording_enabled`, `recording_id`, `target_account`, `target_account_type`, `target_system`, `credential_type`, `credential_name`
+
+#### Application Logs
+`application`, `application_name`, `application_version`, `environment`, `log_level`, `logger_name`, `message`, `exception_type`, `exception_message`, `stack_trace`, `thread_name`, `thread_id`, `span_id`, `trace_id`, `custom_fields`
+
+#### Audit & Compliance
+`audit_id`, `operation`, `operation_type`, `modification_type`, `change_type`, `change_description`, `change_reason`, `old_value`, `new_value`, `justification`, `approval_id`, `approval_status`, `approver`, `workflow_id`, `compliance_status`, `policy_name`, `policy_violation`
+
+#### Metrics & Performance
+`metric_name`, `metric_value`, `threshold`, `cpu_usage`, `memory_usage`, `disk_usage`, `throughput_bps`, `connection_count`, `response_time_ms`, `execution_time_ms`, `duration`, `jitter_ms`, `offset_ms`, `latency`
+
+</details>
+
+## Heuristic value generation
+
+When a field has no explicit value, Rosetta infers a reasonable value based on name patterns. This makes large schemas usable without hardcoding every field.
+
+### Supported field patterns
+
+| Category | Patterns |
+|----------|----------|
+| Network | `*_ip`, `*_ipv6`, `*_port`, `*_mac`, `*_domain`, `*_hostname`, `*_url` |
+| Identity | `*_email`, `*_user`, `*_sid`, `*_arn` |
+| Identifiers | `*_id`, `*_uuid`, `*_guid` |
+| Hashing | `*_hash`, `*_md5`, `*_sha1`, `*_sha256` |
+| Status | `*_status`, `*_result`, `*_outcome`, `*_verdict`, `*_action` |
+| Metrics | `*_size`, `*_bytes`, `*_count`, `*_duration`, `*_ms`, `*_score`, `*_percent` |
+| Time | `*_time`, `*_timestamp`, `*_date` |
+| HTTP/API | `http_*`, `request_*`, `response_*`, `api_*` |
+| DNS/DHCP | `dns_*`, `dhcp_*` |
+| Authentication | `auth_*`, `mfa_*`, `token_*`, `session_*`, `role_*`, `permission_*` |
+| Kubernetes | `namespace`, `pod_*`, `container_*`, `node_*`, `cluster`, `labels`, `annotations`, `service_account` |
+| Threats | `vulnerability_*`, `cve`, `cvss_*`, `threat_*`, `mitre_*`, `ioc_*` |
+| Email/SMTP | `sender_*`, `recipient_*`, `smtp_*`, `dkim_*`, `spf_*`, `dmarc_*` |
+| Boolean | `is_*`, `*_enabled`, `*_flag` |
+
+## Sender
+
+Send synthetic events to TCP/UDP/HTTP/HTTPS endpoints using multi-threaded workers.
+
+### Supported data types
+- `SYSLOG`
+- `CEF`
+- `LEEF`
+- `WINEVENT`
+- `JSON`
+- `INCIDENT`
+
+### Destination formats
+- UDP: `udp:127.0.0.1:514`
+- TCP: `tcp:127.0.0.1:514`
+- HTTP: `http://127.0.0.1:8000/endpoint`
+- HTTPS: `https://127.0.0.1:8000/endpoint`
+
+### Example
+```python
+from rosetta import Sender, WorkerTypeEnum
+
+# UDP syslog
+udp_worker = Sender(
+    data_type=WorkerTypeEnum.SYSLOG,
+    destination="udp:127.0.0.1:514",
+    observables=observables,
+    count=5,
+    interval=2
+)
+udp_worker.start()
+
+# HTTP JSON
+http_worker = Sender(
+    data_type=WorkerTypeEnum.JSON,
+    destination="http://127.0.0.1:8000/logs",
+    observables=observables,
+    count=5,
+    interval=2
+)
+http_worker.start()
+```
+
+## Converter
+
+```python
+from rosetta import Converter, ConverterToEnum, ConverterFromEnum
+
+cef_log = "CEF:0|Security|IDS|1.0|Alert|10|src=192.168.0.1 dst=192.168.0.2 act=blocked"
+converted = Converter.convert(from_type=ConverterFromEnum.CEF, to_type=ConverterToEnum.JSON, data=cef_log)
+```
+
+## Testing
+
+```sh
+python3 -m unittest discover -s tests
+```
+
+## Database telemetry
+
+Rosetta can generate realistic database activity logs including normal operations and attack patterns.
+
+### Supported query types
+`SELECT`, `INSERT`, `UPDATE`, `DELETE`, `ALTER`, `CREATE`, `DROP`, `TRUNCATE`, `GRANT`, `REVOKE`, `MERGE`, `CALL`
+
+### Attack patterns included
+- SQL injection queries
+- Unauthorized data manipulation
+- Privilege escalation attempts
+
+## OWASP Top 10 attack simulation
+
+Rosetta includes built-in OWASP Top 10 attack technique indicators:
+- Injection (SQL, Command)
+- Broken Authentication and Session Management
+- Cross-Site Scripting (XSS)
+- Broken Access Control
+- Security Misconfiguration
+- Insecure Cryptographic Storage
+- Insufficient Transport Layer Protection
+- Unvalidated Redirects and Forwards
+- Using Components with Known Vulnerabilities
+- Insufficient Logging and Monitoring
+
+## Network protocols
+
+Supported protocols for telemetry generation:
+`TCP`, `UDP`, `HTTP`, `SSL`, `SQL`, `SSH`, `FTP`, `RTP`, `RDP`
+
+## Windows telemetry
+
+Rosetta generates realistic Windows endpoint data including:
+- 18 common Windows processes (explorer.exe, svchost.exe, lsass.exe, etc.)
+- PowerShell commands for attack simulation
+- Windows Event Log XML templates (Sysmon, Security events)
+
+## Examples
+
+See the `examples/` directory for complete usage examples:
+- `observables.py` - Generate indicators
+- `events_formats.py` - Create events in different formats
+- `incidents.py` - Build incident bundles
+- `sender_tcp_udp_http.py` - Send events to endpoints
+- `converter.py` - Convert between formats
+- `k8s_fields.py` - Kubernetes field generation
+- `presets_schema.py` - Schema validation
+
+## Notes
+
+- Some observable generators fetch from public sources. When offline, Rosetta falls back to synthetic values.
+- Preset and schema files are generated from the CSV mapping in the project root and can be updated as your schema evolves.

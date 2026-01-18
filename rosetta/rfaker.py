@@ -6,6 +6,9 @@ import csv
 import hashlib
 import itertools
 import time
+import json
+from pathlib import Path
+from string import Formatter
 from enum import Enum
 from functools import reduce
 from faker import Faker
@@ -50,7 +53,7 @@ class Observables:
                 error_code: Optional[list] = None, terms: Optional[list] = None, alert_types: Optional[list] = None,
                 alert_name: Optional[list] = None, incident_types: Optional[list] = None,
                 analysts: Optional[list] = None, action_status: Optional[list] = None, query_type: Optional[list] = None,
-                database_name: Optional[list] = None, query: Optional[list] = None):
+                database_name: Optional[list] = None, query: Optional[list] = None, **kwargs):
         self.local_ip = local_ip
         self.remote_ip = remote_ip
         self.local_ip_v6 = local_ip_v6
@@ -97,6 +100,8 @@ class Observables:
         self.query_type = query_type
         self.database_name = database_name
         self.query = query
+        for key, value in kwargs.items():
+            setattr(self, key, value)
     @staticmethod
     def _get_observables_from_source(source: dict) -> list:
         """
@@ -275,6 +280,86 @@ class Events:
 
     faker = Faker()
     field_timings = {}
+    required_presets = {}
+    supported_fields = set()
+    warned_fields = set()
+
+    @classmethod
+    def _load_required_presets(cls):
+        if cls.required_presets:
+            return
+        presets_path = Path(__file__).resolve().parent / "schema" / "required_presets.json"
+        try:
+            with presets_path.open("r", encoding="utf-8") as handle:
+                cls.required_presets = json.load(handle)
+        except (FileNotFoundError, json.JSONDecodeError):
+            cls.required_presets = {}
+
+    @classmethod
+    def _get_required_fields(cls, data_type: str) -> list:
+        cls._load_required_presets()
+        return cls.required_presets.get(data_type, [])
+
+    @staticmethod
+    def _fallback_required_fields(data_type: str) -> list:
+        fallback_map = {
+            "syslog": ["pid", "host", "user", "unix_process", "unix_cmd"],
+            "cef": ["local_ip", "local_port", "remote_ip", "remote_port", "protocol", "rule_id", "action"],
+            "leef": ["local_ip", "local_port", "host", "url", "protocol", "response_code", "action"],
+            "winevent": [
+                "process_id",
+                "new_process_id",
+                "thread_id",
+                "target_pid",
+                "subject_login_id",
+                "win_user_id",
+                "destination_login_id",
+                "privilege_list",
+                "win_process",
+                "src_host",
+                "user",
+                "win_cmd",
+                "source_network_address",
+                "local_port",
+                "transmitted_services",
+                "file_name",
+                "src_domain",
+            ],
+            "json": ["user", "host"],
+        }
+        return fallback_map.get(data_type, [])
+
+    @classmethod
+    def _required_fields_or_fallback(cls, data_type: str) -> list:
+        required_fields = cls._get_required_fields(data_type)
+        if required_fields:
+            return required_fields
+        return cls._fallback_required_fields(data_type)
+
+    @classmethod
+    def _load_supported_fields(cls):
+        if cls.supported_fields:
+            return
+        supported_path = Path(__file__).resolve().parent / "schema" / "supported_fields.json"
+        try:
+            with supported_path.open("r", encoding="utf-8") as handle:
+                cls.supported_fields = set(json.load(handle))
+        except (FileNotFoundError, json.JSONDecodeError):
+            cls.supported_fields = set()
+
+    @classmethod
+    def _validate_fields(cls, required_fields_list: list, observables_dict: dict):
+        cls._load_supported_fields()
+        if not cls.supported_fields:
+            return
+        to_check = set(required_fields_list)
+        to_check.update(observables_dict.keys())
+        unknown = sorted(field for field in to_check if field not in cls.supported_fields)
+        for field in unknown:
+            if field in cls.warned_fields:
+                continue
+            warnings.warn(f"Field '{field}' is not in schema/supported_fields.json; generated value may be generic.")
+            cls.warned_fields.add(field)
 
     @staticmethod
     def _set_field(field):
@@ -388,9 +473,211 @@ class Events:
             generator = default_generators[field]
             field_value = generator() if callable(generator) else generator()
         else:
-            field_value = faker.word()
+            field_value = Events._infer_field_value(field, faker)
 
         return field_value
+
+    @staticmethod
+    def _infer_field_value(field, faker):
+        field_lower = field.lower()
+        now = datetime.now().isoformat()
+
+        if field_lower in {"true", "false"}:
+            return random.choice([True, False])
+        if field_lower.startswith("is_") or field_lower.endswith("_enabled") or field_lower.endswith("_flag"):
+            return random.choice([True, False])
+        if field_lower.startswith("auth_") or field_lower.startswith("mfa_"):
+            return random.choice(["success", "failure", "challenge"])
+        if field_lower.startswith("token_") or field_lower.endswith("_token"):
+            return faker.uuid4()
+        if field_lower.startswith("session_"):
+            return faker.uuid4()
+        if field_lower.startswith("role_") or field_lower.endswith("_role"):
+            return faker.job()
+        if field_lower.startswith("group_") or field_lower.endswith("_group"):
+            return faker.word()
+        if field_lower.startswith("entitlement") or field_lower.startswith("permission"):
+            return faker.word()
+        if field_lower.endswith("_ip") or field_lower in {"ip", "ip_address"}:
+            return faker.ipv4()
+        if "ipv6" in field_lower or field_lower.endswith("_ip_v6") or field_lower.endswith("_ipv6"):
+            return faker.ipv6()
+        if field_lower.endswith("_port"):
+            return faker.random_int(min=1, max=65535)
+        if field_lower.endswith("_port_name"):
+            return random.choice(["http", "https", "ssh", "rdp", "smtp"])
+        if field_lower.endswith("_mac") or "mac_address" in field_lower:
+            return faker.mac_address()
+        if field_lower.endswith("_domain") or field_lower == "domain":
+            return faker.domain_name()
+        if field_lower.endswith("_hostname") or field_lower in {"hostname", "host_name"}:
+            return faker.hostname()
+        if field_lower in {"host", "server", "server_name"}:
+            return faker.hostname()
+        if field_lower.endswith("_url") or field_lower == "url" or "uri" in field_lower:
+            return faker.url()
+        if field_lower.startswith("dns_"):
+            if "response" in field_lower:
+                return faker.ipv4()
+            return faker.domain_name()
+        if field_lower.startswith("dhcp_") or "lease_" in field_lower:
+            return now
+        if field_lower.endswith("_email") or "email" in field_lower:
+            return faker.email()
+        if field_lower.endswith("_user") or field_lower.endswith("_username") or field_lower == "username":
+            return faker.user_name()
+        if field_lower.endswith("_role"):
+            return faker.job()
+        if field_lower.endswith("_type") or field_lower.endswith("_category"):
+            return faker.word()
+        if field_lower.endswith("_name"):
+            return faker.word()
+        if field_lower.startswith("api_"):
+            if field_lower.endswith("_key"):
+                return faker.uuid4()
+            if field_lower.endswith("_endpoint") or field_lower.endswith("_operation"):
+                return f"/{faker.word()}"
+            return faker.word()
+        if field_lower.startswith("http_") or field_lower.startswith("request_") or field_lower.startswith("response_"):
+            if "method" in field_lower:
+                return random.choice(["GET", "POST", "PUT", "DELETE", "PATCH"])
+            if "status" in field_lower or "code" in field_lower:
+                return random.choice([200, 201, 204, 301, 302, 400, 401, 403, 404, 429, 500, 502])
+            if "header" in field_lower:
+                return {"x-request-id": faker.uuid4()}
+            if "size" in field_lower or "length" in field_lower:
+                return faker.random_int(min=0, max=10485760)
+            if "path" in field_lower or "uri" in field_lower:
+                return f"/{faker.word()}/{faker.word()}"
+            return faker.sentence(nb_words=6)
+        if field_lower.startswith("cookie") or field_lower.endswith("_cookie"):
+            return f"{faker.word()}={faker.uuid4()}"
+        if field_lower.endswith("_id") or field_lower.endswith("_guid") or field_lower.endswith("_uuid"):
+            return faker.uuid4()
+        if field_lower.endswith("_sid"):
+            return f"S-1-{faker.random_int(min=1000, max=999999999)}"
+        if field_lower.endswith("_path") or field_lower.endswith("_directory") or field_lower == "cwd":
+            return faker.file_path()
+        if "file_name" in field_lower or field_lower.endswith("_filename"):
+            return faker.file_name()
+        if "file_type" in field_lower:
+            return faker.file_extension()
+        if field_lower.endswith("_time") or field_lower.endswith("_timestamp") or field_lower.endswith("_date"):
+            return now
+        if field_lower.endswith("_duration") or field_lower.endswith("_ms"):
+            return faker.random_int(min=1, max=600000)
+        if field_lower.endswith("_count") or field_lower.endswith("_total"):
+            return faker.random_int(min=0, max=10000)
+        if field_lower.startswith("scan_") or field_lower.endswith("_scan") or "scan_result" in field_lower:
+            return random.choice(["pass", "fail", "partial", "unknown"])
+        if field_lower.startswith("finding_"):
+            return faker.uuid4()
+        if field_lower.startswith("vulnerability") or field_lower.startswith("cve") or field_lower.startswith("cvss"):
+            if "score" in field_lower:
+                return round(faker.pyfloat(min_value=0, max_value=10), 1)
+            if "vector" in field_lower:
+                return "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+            return f"CVE-{faker.numerify('####')}-{faker.numerify('####')}"
+        if field_lower.endswith("_size") or "bytes" in field_lower:
+            return faker.random_int(min=0, max=1073741824)
+        if field_lower.endswith("_ratio") or field_lower.endswith("_percent") or field_lower.endswith("_percentage"):
+            return faker.random_int(min=0, max=100)
+        if "hash" in field_lower:
+            if "md5" in field_lower:
+                return hashlib.md5(faker.text(max_nb_chars=32).encode()).hexdigest()
+            if "sha1" in field_lower:
+                return hashlib.sha1(faker.text(max_nb_chars=32).encode()).hexdigest()
+            return hashlib.sha256(faker.text(max_nb_chars=64).encode()).hexdigest()
+        if field_lower.endswith("_protocol"):
+            return random.choice(["tcp", "udp", "http", "https", "tls"])
+        if field_lower.endswith("_method"):
+            return random.choice(["GET", "POST", "PUT", "DELETE", "PATCH"])
+        if field_lower.endswith("_status"):
+            return random.choice(["success", "failure", "unknown"])
+        if field_lower.startswith("alert_") or field_lower.startswith("incident_") or field_lower.startswith("rule_"):
+            if field_lower.endswith("_id"):
+                return faker.uuid4()
+            if field_lower.endswith("_severity"):
+                return random.choice(["low", "medium", "high", "critical"])
+            if field_lower.endswith("_type"):
+                return faker.word()
+            return faker.sentence(nb_words=4)
+        if field_lower.startswith("threat_") or field_lower.startswith("signature_"):
+            return faker.word()
+        if field_lower.startswith("mitre_"):
+            return random.choice(["TA0001", "TA0002", "T1059", "T1105"])
+        if field_lower.startswith("ioc_"):
+            return faker.uuid4()
+        if field_lower.startswith("resource_") or field_lower.startswith("instance_"):
+            return faker.uuid4()
+        if field_lower.startswith("bucket_") or field_lower.startswith("vpc_") or field_lower.startswith("subnet_"):
+            return faker.uuid4()
+        if field_lower.startswith("security_group") or field_lower.endswith("_arn"):
+            return faker.uuid4()
+        if field_lower.startswith("k8s_") or field_lower.startswith("pod_") or field_lower.startswith("container_"):
+            if "image" in field_lower:
+                return f"{faker.word()}/{faker.word()}:{faker.numerify('##.#')}"
+            if "id" in field_lower or field_lower.endswith("_uid"):
+                return faker.uuid4()
+            return faker.slug()
+        if field_lower in {"namespace", "namespace_name"} or field_lower.startswith("namespace_"):
+            return random.choice(["default", "kube-system", "prod", "staging", "dev"])
+        if field_lower.startswith("node_") or field_lower.endswith("_node"):
+            return faker.hostname()
+        if field_lower.startswith("cluster"):
+            return f"cluster-{faker.word()}"
+        if field_lower == "labels" or field_lower.startswith("labels_"):
+            return {"app": faker.word(), "tier": random.choice(["frontend", "backend"]), "env": random.choice(["prod", "staging"])}
+        if field_lower == "annotations" or field_lower.startswith("annotations_"):
+            return {"owner": faker.user_name(), "team": faker.word()}
+        if field_lower.startswith("service_account"):
+            return f"sa-{faker.word()}"
+        if field_lower == "tags":
+            return {faker.word(): faker.word()}
+        if field_lower.startswith("sender_") or field_lower.startswith("recipient_"):
+            if "domain" in field_lower:
+                return faker.domain_name()
+            return faker.email()
+        if field_lower.startswith("smtp_"):
+            return random.choice([250, 421, 450, 451, 452, 500, 550, 554])
+        if field_lower.startswith("dkim_") or field_lower.startswith("spf_") or field_lower.startswith("dmarc_"):
+            return random.choice(["pass", "fail", "softfail", "neutral"])
+        if field_lower.endswith("_result") or field_lower.endswith("_outcome") or field_lower.endswith("_verdict"):
+            return random.choice(["allowed", "blocked", "detected", "failed", "passed"])
+        if field_lower.endswith("_action"):
+            return random.choice(["allow", "deny", "drop", "block", "alert"])
+        if field_lower.endswith("_status"):
+            return random.choice(["success", "failure", "unknown"])
+        if field_lower.endswith("_version"):
+            return faker.numerify(text="##.##.#")
+        if field_lower.endswith("_code"):
+            return faker.random_int(min=1, max=9999)
+        if field_lower.endswith("_score"):
+            return faker.random_int(min=0, max=100)
+        if field_lower.endswith("_level") or field_lower == "severity":
+            return random.choice(["low", "medium", "high", "critical"])
+        if field_lower.endswith("_reason"):
+            return faker.sentence(nb_words=6)
+        if field_lower.endswith("_message") or field_lower == "message":
+            return faker.sentence(nb_words=12)
+        if field_lower.endswith("_subject"):
+            return faker.sentence(nb_words=6)
+        if field_lower.endswith("_body") or "content" in field_lower:
+            return faker.sentence(nb_words=20)
+        if field_lower.endswith("_command") or field_lower.endswith("_cmd"):
+            return faker.sentence(nb_words=4)
+        if field_lower.endswith("_query"):
+            return faker.sentence(nb_words=5)
+        if field_lower.endswith("_ip_range") or field_lower.endswith("_port_range"):
+            return f"{faker.random_int(min=1, max=65535)}-{faker.random_int(min=1, max=65535)}"
+        if field_lower.endswith("_version"):
+            return faker.numerify(text="##.##.#")
+        if field_lower.endswith("_algorithm") or "cipher" in field_lower:
+            return random.choice(["aes-128-gcm", "aes-256-gcm", "chacha20-poly1305"])
+        if field_lower.endswith("_ip_address"):
+            return faker.ipv4()
+
+        return faker.word()
     
     @classmethod
     def syslog(
@@ -420,13 +707,11 @@ class Events:
             datetime_iso = datetime.now() - timedelta(hours=1)
             datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
 
-        # Set default required fields
-        required_fields_list = required_fields.split(",") if required_fields else [
-            "pid", "host", "user", "unix_process", "unix_cmd"
-        ]
+        required_fields_list = required_fields.split(",") if required_fields else cls._required_fields_or_fallback("syslog")
 
         # Convert observables to a dictionary for easy access
         observables_dict = vars(observables) if observables else {}
+        cls._validate_fields(required_fields_list, observables_dict)
 
         # Precompute constant fields (if any)
         # For syslog, most fields may vary per message, so we may not have many constants
@@ -485,12 +770,11 @@ class Events:
         product = product or faker.word()
         version = version or faker.numerify("1.0.#")
         datetime_iso = datetime_iso or datetime.now() - timedelta(hours=1)
-        required_fields_list = required_fields.split(",") if required_fields else [
-            "local_ip", "local_port", "remote_ip", "remote_port", "protocol", "rule_id", "action"
-        ]
+        required_fields_list = required_fields.split(",") if required_fields else cls._required_fields_or_fallback("cef")
 
         # Convert observables to a dictionary for easy access
         observables_dict = vars(observables) if observables else {}
+        cls._validate_fields(required_fields_list, observables_dict)
 
         # Generate events
         for i in range(count):
@@ -553,12 +837,11 @@ class Events:
 
         # Set starting datetime and default fields if necessary
         datetime_iso = datetime_iso or datetime.now() - timedelta(hours=1)
-        required_fields_list = required_fields.split(",") if required_fields else [
-            "local_ip", "local_port", "host", "url", "protocol", "response_code", "action"
-        ]
+        required_fields_list = required_fields.split(",") if required_fields else cls._required_fields_or_fallback("leef")
 
         # Convert observables to a dictionary for easy access
         observables_dict = vars(observables) if observables else {}
+        cls._validate_fields(required_fields_list, observables_dict)
 
         # Precompute constant fields
         # Event ID and severity might change per event; move inside the loop if needed
@@ -634,29 +917,11 @@ class Events:
             datetime_iso = datetime.now() - timedelta(hours=1)
             datetime_iso += timedelta(seconds=faker.random_int(min=0, max=3599))
 
-        # Define required fields
-        required_fields_list = [
-            "process_id",
-            "new_process_id",
-            "thread_id",
-            "target_pid",
-            "subject_login_id",
-            "win_user_id",
-            "destination_login_id",
-            "privilege_list",
-            "win_process",
-            "src_host",
-            "user",
-            "win_cmd",
-            "source_network_address",
-            "local_port",
-            "transmitted_services",
-            "file_name",
-            "src_domain"
-        ]
+        required_fields_list = cls._required_fields_or_fallback("winevent")
 
         # Convert observables to a dictionary for easy access
         observables_dict = vars(observables) if observables else {}
+        cls._validate_fields(required_fields_list, observables_dict)
 
         # Precompute constant fields (if any)
         constant_fields = {
@@ -714,6 +979,13 @@ class Events:
             # Select a random event template
             unformatted_event = random.choice(WIN_EVENTS)
 
+            # Ensure all template fields exist to avoid KeyError
+            for _, field_name, _, _ in Formatter().parse(unformatted_event):
+                if not field_name:
+                    continue
+                if field_name not in event_fields:
+                    event_fields[field_name] = Events._set_field(field_name)
+
             # Format the event with all fields
             win_event = unformatted_event.format(**event_fields)
 
@@ -758,16 +1030,16 @@ class Events:
         # Set initial datetime
         datetime_iso = datetime_iso or datetime.now() - timedelta(hours=1)
 
-        # Set required fields
         if required_fields:
             required_fields_list = required_fields.split(",")
         else:
-            required_fields_list = (
-                ["cve_id", "host", "file_hash"] if product == "VulnScanner" else ["user", "host"]
-            )
+            required_fields_list = cls._required_fields_or_fallback("json")
+            if product == "VulnScanner" and required_fields_list == ["user", "host"]:
+                required_fields_list = ["cve_id", "host", "file_hash"]
 
         # Convert observables to a dictionary for easy access
         observables_dict = vars(observables) if observables else {}
+        cls._validate_fields(required_fields_list, observables_dict)
 
         # Precompute constant fields
         constant_fields = {
