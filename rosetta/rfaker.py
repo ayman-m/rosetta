@@ -53,7 +53,108 @@ class Observables:
                 error_code: Optional[list] = None, terms: Optional[list] = None, alert_types: Optional[list] = None,
                 alert_name: Optional[list] = None, incident_types: Optional[list] = None,
                 analysts: Optional[list] = None, action_status: Optional[list] = None, query_type: Optional[list] = None,
-                database_name: Optional[list] = None, query: Optional[list] = None, **kwargs):
+                database_name: Optional[list] = None, query: Optional[list] = None,
+                # Network Extended (Industry-standard naming)
+                source_ip: Optional[list] = None, destination_ip: Optional[list] = None,
+                source_port: Optional[list] = None, destination_port: Optional[list] = None,
+                client_ip: Optional[list] = None, server_ip: Optional[list] = None,
+                client_port: Optional[list] = None, server_port: Optional[list] = None,
+                public_ip: Optional[list] = None, private_ip: Optional[list] = None,
+                nat_source_ip: Optional[list] = None, nat_destination_ip: Optional[list] = None,
+                client_mac: Optional[list] = None, server_hostname: Optional[list] = None,
+                client_hostname: Optional[list] = None, destination_hostname: Optional[list] = None,
+                source_hostname: Optional[list] = None,
+                # HTTP/API
+                http_method: Optional[list] = None, http_uri: Optional[list] = None,
+                http_status_code: Optional[list] = None, http_user_agent: Optional[list] = None,
+                http_host: Optional[list] = None, http_referer: Optional[list] = None,
+                api_endpoint: Optional[list] = None, api_key: Optional[list] = None,
+                api_name: Optional[list] = None, request_id: Optional[list] = None,
+                response_time_ms: Optional[list] = None, content_type: Optional[list] = None,
+                # DNS/DHCP
+                dns_query: Optional[list] = None, dns_response: Optional[list] = None,
+                dns_server: Optional[list] = None, query_time_ms: Optional[list] = None,
+                lease_duration: Optional[list] = None,
+                # Kubernetes/Containers
+                container_id: Optional[list] = None, container_name: Optional[list] = None,
+                container_image: Optional[list] = None, pod_name: Optional[list] = None,
+                pod_uid: Optional[list] = None, namespace: Optional[list] = None,
+                cluster: Optional[list] = None, node_name: Optional[list] = None,
+                service_account: Optional[list] = None, labels: Optional[list] = None,
+                annotations: Optional[list] = None,
+                # Cloud Infrastructure
+                cloud_provider: Optional[list] = None, region: Optional[list] = None,
+                instance_id: Optional[list] = None, instance_type: Optional[list] = None,
+                vpc_id: Optional[list] = None, subnet_id: Optional[list] = None,
+                security_groups: Optional[list] = None, iam_role: Optional[list] = None,
+                bucket_name: Optional[list] = None, resource_id: Optional[list] = None,
+                resource_type: Optional[list] = None, resource_arn: Optional[list] = None,
+                # SSL/TLS
+                ssl_cipher: Optional[list] = None, ssl_version: Optional[list] = None,
+                tls_version: Optional[list] = None, certificate_cn: Optional[list] = None,
+                certificate_issuer: Optional[list] = None, ja3_hash: Optional[list] = None,
+                ja3s_hash: Optional[list] = None,
+                # Threat Detection
+                mitre_tactic: Optional[list] = None, mitre_technique: Optional[list] = None,
+                threat_score: Optional[list] = None, threat_level: Optional[list] = None,
+                threat_name: Optional[list] = None, threat_type: Optional[list] = None,
+                signature_id: Optional[list] = None, signature_name: Optional[list] = None,
+                cve_id: Optional[list] = None, cvss_score: Optional[list] = None,
+                ioc_type: Optional[list] = None, ioc_value: Optional[list] = None,
+                # Process Extended
+                parent_process_name: Optional[list] = None, command_line: Optional[list] = None,
+                executable_path: Optional[list] = None, working_directory: Optional[list] = None,
+                process_name: Optional[list] = None, process_guid: Optional[list] = None,
+                ppid: Optional[list] = None,
+                # File Extended
+                file_path: Optional[list] = None, file_size: Optional[list] = None,
+                file_type: Optional[list] = None, file_hash_sha256: Optional[list] = None,
+                file_hash_md5: Optional[list] = None, file_hash_sha1: Optional[list] = None,
+                file_owner: Optional[list] = None,
+                # Email Extended
+                sender: Optional[list] = None, recipient: Optional[list] = None,
+                subject: Optional[list] = None, message_id: Optional[list] = None,
+                attachment_name: Optional[list] = None, attachment_hash: Optional[list] = None,
+                spf_result: Optional[list] = None, dkim_result: Optional[list] = None,
+                dmarc_result: Optional[list] = None,
+                # Authentication
+                authentication_method: Optional[list] = None, authentication_result: Optional[list] = None,
+                mfa_method: Optional[list] = None, mfa_result: Optional[list] = None,
+                logon_type: Optional[list] = None, session_id: Optional[list] = None,
+                username: Optional[list] = None, account_name: Optional[list] = None,
+                # Firewall/IDS
+                firewall_name: Optional[list] = None, rule_name: Optional[list] = None,
+                rule_action: Optional[list] = None, zone_source: Optional[list] = None,
+                zone_destination: Optional[list] = None, tcp_flags: Optional[list] = None,
+                packets: Optional[list] = None, bytes_sent: Optional[list] = None,
+                bytes_received: Optional[list] = None,
+                # Virtual Machines
+                vm_id: Optional[list] = None, vm_name: Optional[list] = None,
+                hypervisor_type: Optional[list] = None, cpu_usage: Optional[list] = None,
+                memory_usage: Optional[list] = None,
+                # Database Extended
+                query_text: Optional[list] = None, execution_time_ms: Optional[list] = None,
+                transaction_id: Optional[list] = None, affected_rows: Optional[list] = None,
+                schema_name: Optional[list] = None,
+                # Vulnerability/Compliance
+                vulnerability_id: Optional[list] = None, vulnerability_name: Optional[list] = None,
+                scan_result: Optional[list] = None, scan_type: Optional[list] = None,
+                compliance_status: Optional[list] = None,
+                # Incident Response
+                incident_id: Optional[list] = None, incident_severity: Optional[list] = None,
+                incident_status: Optional[list] = None, playbook_id: Optional[list] = None,
+                alert_id: Optional[list] = None,
+                # Additional commonly used
+                hostname: Optional[list] = None, host: Optional[list] = None,
+                domain: Optional[list] = None, status: Optional[list] = None,
+                result: Optional[list] = None, message: Optional[list] = None,
+                description: Optional[list] = None, timestamp: Optional[list] = None,
+                risk_score: Optional[list] = None, priority: Optional[list] = None,
+                category: Optional[list] = None, tags: Optional[list] = None,
+                malware_name: Optional[list] = None, malware_type: Optional[list] = None,
+                direction: Optional[list] = None, geo_location: Optional[list] = None,
+                country: Optional[list] = None, **kwargs):
+        # Original fields
         self.local_ip = local_ip
         self.remote_ip = remote_ip
         self.local_ip_v6 = local_ip_v6
@@ -100,6 +201,195 @@ class Observables:
         self.query_type = query_type
         self.database_name = database_name
         self.query = query
+
+        # Network Extended (Industry-standard naming)
+        self.source_ip = source_ip
+        self.destination_ip = destination_ip
+        self.source_port = source_port
+        self.destination_port = destination_port
+        self.client_ip = client_ip
+        self.server_ip = server_ip
+        self.client_port = client_port
+        self.server_port = server_port
+        self.public_ip = public_ip
+        self.private_ip = private_ip
+        self.nat_source_ip = nat_source_ip
+        self.nat_destination_ip = nat_destination_ip
+        self.client_mac = client_mac
+        self.server_hostname = server_hostname
+        self.client_hostname = client_hostname
+        self.destination_hostname = destination_hostname
+        self.source_hostname = source_hostname
+
+        # HTTP/API
+        self.http_method = http_method
+        self.http_uri = http_uri
+        self.http_status_code = http_status_code
+        self.http_user_agent = http_user_agent
+        self.http_host = http_host
+        self.http_referer = http_referer
+        self.api_endpoint = api_endpoint
+        self.api_key = api_key
+        self.api_name = api_name
+        self.request_id = request_id
+        self.response_time_ms = response_time_ms
+        self.content_type = content_type
+
+        # DNS/DHCP
+        self.dns_query = dns_query
+        self.dns_response = dns_response
+        self.dns_server = dns_server
+        self.query_time_ms = query_time_ms
+        self.lease_duration = lease_duration
+
+        # Kubernetes/Containers
+        self.container_id = container_id
+        self.container_name = container_name
+        self.container_image = container_image
+        self.pod_name = pod_name
+        self.pod_uid = pod_uid
+        self.namespace = namespace
+        self.cluster = cluster
+        self.node_name = node_name
+        self.service_account = service_account
+        self.labels = labels
+        self.annotations = annotations
+
+        # Cloud Infrastructure
+        self.cloud_provider = cloud_provider
+        self.region = region
+        self.instance_id = instance_id
+        self.instance_type = instance_type
+        self.vpc_id = vpc_id
+        self.subnet_id = subnet_id
+        self.security_groups = security_groups
+        self.iam_role = iam_role
+        self.bucket_name = bucket_name
+        self.resource_id = resource_id
+        self.resource_type = resource_type
+        self.resource_arn = resource_arn
+
+        # SSL/TLS
+        self.ssl_cipher = ssl_cipher
+        self.ssl_version = ssl_version
+        self.tls_version = tls_version
+        self.certificate_cn = certificate_cn
+        self.certificate_issuer = certificate_issuer
+        self.ja3_hash = ja3_hash
+        self.ja3s_hash = ja3s_hash
+
+        # Threat Detection
+        self.mitre_tactic = mitre_tactic
+        self.mitre_technique = mitre_technique
+        self.threat_score = threat_score
+        self.threat_level = threat_level
+        self.threat_name = threat_name
+        self.threat_type = threat_type
+        self.signature_id = signature_id
+        self.signature_name = signature_name
+        self.cve_id = cve_id
+        self.cvss_score = cvss_score
+        self.ioc_type = ioc_type
+        self.ioc_value = ioc_value
+
+        # Process Extended
+        self.parent_process_name = parent_process_name
+        self.command_line = command_line
+        self.executable_path = executable_path
+        self.working_directory = working_directory
+        self.process_name = process_name
+        self.process_guid = process_guid
+        self.ppid = ppid
+
+        # File Extended
+        self.file_path = file_path
+        self.file_size = file_size
+        self.file_type = file_type
+        self.file_hash_sha256 = file_hash_sha256
+        self.file_hash_md5 = file_hash_md5
+        self.file_hash_sha1 = file_hash_sha1
+        self.file_owner = file_owner
+
+        # Email Extended
+        self.sender = sender
+        self.recipient = recipient
+        self.subject = subject
+        self.message_id = message_id
+        self.attachment_name = attachment_name
+        self.attachment_hash = attachment_hash
+        self.spf_result = spf_result
+        self.dkim_result = dkim_result
+        self.dmarc_result = dmarc_result
+
+        # Authentication
+        self.authentication_method = authentication_method
+        self.authentication_result = authentication_result
+        self.mfa_method = mfa_method
+        self.mfa_result = mfa_result
+        self.logon_type = logon_type
+        self.session_id = session_id
+        self.username = username
+        self.account_name = account_name
+
+        # Firewall/IDS
+        self.firewall_name = firewall_name
+        self.rule_name = rule_name
+        self.rule_action = rule_action
+        self.zone_source = zone_source
+        self.zone_destination = zone_destination
+        self.tcp_flags = tcp_flags
+        self.packets = packets
+        self.bytes_sent = bytes_sent
+        self.bytes_received = bytes_received
+
+        # Virtual Machines
+        self.vm_id = vm_id
+        self.vm_name = vm_name
+        self.hypervisor_type = hypervisor_type
+        self.cpu_usage = cpu_usage
+        self.memory_usage = memory_usage
+
+        # Database Extended
+        self.query_text = query_text
+        self.execution_time_ms = execution_time_ms
+        self.transaction_id = transaction_id
+        self.affected_rows = affected_rows
+        self.schema_name = schema_name
+
+        # Vulnerability/Compliance
+        self.vulnerability_id = vulnerability_id
+        self.vulnerability_name = vulnerability_name
+        self.scan_result = scan_result
+        self.scan_type = scan_type
+        self.compliance_status = compliance_status
+
+        # Incident Response
+        self.incident_id = incident_id
+        self.incident_severity = incident_severity
+        self.incident_status = incident_status
+        self.playbook_id = playbook_id
+        self.alert_id = alert_id
+
+        # Additional commonly used
+        self.hostname = hostname
+        self.host = host
+        self.domain = domain
+        self.status = status
+        self.result = result
+        self.message = message
+        self.description = description
+        self.timestamp = timestamp
+        self.risk_score = risk_score
+        self.priority = priority
+        self.category = category
+        self.tags = tags
+        self.malware_name = malware_name
+        self.malware_type = malware_type
+        self.direction = direction
+        self.geo_location = geo_location
+        self.country = country
+
+        # Handle any additional kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)
     @staticmethod

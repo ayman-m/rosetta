@@ -91,17 +91,34 @@ observables = Observables(
 
 ### Built-in observable fields
 
+Rosetta now supports **270+ observable fields** covering traditional and modern infrastructure.
+
 | Category | Fields |
 |----------|--------|
 | Network (IPv4/IPv6) | `local_ip`, `remote_ip`, `local_ip_v6`, `remote_ip_v6`, `local_port`, `remote_port`, `protocol` |
-| Hosts & Domains | `src_host`, `dst_host`, `src_domain`, `dst_domain`, `url` |
-| Users & Email | `user`, `sender_email`, `recipient_email`, `email_subject`, `email_body` |
-| Files | `file_name`, `file_hash` |
-| Processes | `win_process`, `win_child_process`, `unix_process`, `unix_child_process`, `win_cmd`, `unix_cmd` |
+| Network Extended | `source_ip`, `destination_ip`, `source_port`, `destination_port`, `client_ip`, `server_ip`, `client_port`, `server_port`, `public_ip`, `private_ip`, `nat_source_ip`, `nat_destination_ip`, `client_mac`, `server_hostname`, `client_hostname`, `destination_hostname`, `source_hostname` |
+| Hosts & Domains | `src_host`, `dst_host`, `src_domain`, `dst_domain`, `url`, `hostname`, `host`, `domain` |
+| HTTP/API | `http_method`, `http_uri`, `http_status_code`, `http_user_agent`, `http_host`, `http_referer`, `api_endpoint`, `api_key`, `api_name`, `request_id`, `response_time_ms`, `content_type` |
+| DNS/DHCP | `dns_query`, `dns_response`, `dns_server`, `query_time_ms`, `lease_duration` |
+| Kubernetes/Containers | `container_id`, `container_name`, `container_image`, `pod_name`, `pod_uid`, `namespace`, `cluster`, `node_name`, `service_account`, `labels`, `annotations` |
+| Cloud Infrastructure | `cloud_provider`, `region`, `instance_id`, `instance_type`, `vpc_id`, `subnet_id`, `security_groups`, `iam_role`, `bucket_name`, `resource_id`, `resource_type`, `resource_arn` |
+| SSL/TLS | `ssl_cipher`, `ssl_version`, `tls_version`, `certificate_cn`, `certificate_issuer`, `ja3_hash`, `ja3s_hash` |
+| Threat Detection | `mitre_tactic`, `mitre_technique`, `threat_score`, `threat_level`, `threat_name`, `threat_type`, `signature_id`, `signature_name`, `cve_id`, `cvss_score`, `ioc_type`, `ioc_value` |
+| Users & Email | `user`, `sender_email`, `recipient_email`, `email_subject`, `email_body`, `sender`, `recipient`, `subject`, `message_id`, `attachment_name`, `attachment_hash`, `spf_result`, `dkim_result`, `dmarc_result` |
+| Authentication | `authentication_method`, `authentication_result`, `mfa_method`, `mfa_result`, `logon_type`, `session_id`, `username`, `account_name` |
+| Files | `file_name`, `file_hash`, `file_path`, `file_size`, `file_type`, `file_hash_sha256`, `file_hash_md5`, `file_hash_sha1`, `file_owner` |
+| Processes | `win_process`, `win_child_process`, `unix_process`, `unix_child_process`, `win_cmd`, `unix_cmd`, `parent_process_name`, `command_line`, `executable_path`, `working_directory`, `process_name`, `process_guid`, `ppid` |
+| Firewall/IDS | `firewall_name`, `rule_name`, `rule_action`, `zone_source`, `zone_destination`, `tcp_flags`, `packets`, `bytes_sent`, `bytes_received` |
+| Virtual Machines | `vm_id`, `vm_name`, `hypervisor_type`, `cpu_usage`, `memory_usage` |
+| Database | `query_type`, `database_name`, `query`, `query_text`, `execution_time_ms`, `transaction_id`, `affected_rows`, `schema_name` |
+| Vulnerability/Compliance | `vulnerability_id`, `vulnerability_name`, `scan_result`, `scan_type`, `compliance_status` |
+| Incident Response | `incident_id`, `incident_severity`, `incident_status`, `playbook_id`, `alert_id` |
 | Security | `severity`, `action`, `event_id`, `error_code`, `technique`, `cve`, `terms` |
 | Alerts & Incidents | `alert_types`, `alert_name`, `incident_types`, `analysts`, `action_status` |
-| Database | `query_type`, `database_name`, `query` |
+| Common Fields | `status`, `result`, `message`, `description`, `timestamp`, `risk_score`, `priority`, `category`, `tags`, `malware_name`, `malware_type`, `direction`, `geo_location`, `country` |
 | Other | `app`, `os`, `sensor`, `entry_type`, `inbound_bytes`, `outbound_bytes` |
+
+**Industry-standard field naming**: Rosetta now supports both traditional naming (`local_ip`, `remote_ip`) and industry-standard naming (`source_ip`, `destination_ip`, `client_ip`, `server_ip`) for better compatibility with modern SIEM platforms.
 
 ## Events
 

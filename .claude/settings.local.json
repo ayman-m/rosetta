@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(python test_extended_fields.py:*)",
+      "Bash(git add:*)"
     ]
   }
 }
