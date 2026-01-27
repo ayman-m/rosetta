@@ -22,6 +22,19 @@ from rosetta.constants.sensors import ACTIONS, PROTOCOLS, TECHNIQUES, ERROR_CODE
 from rosetta.constants.db import QUERY_TYPE, DATABASE_NAME, QUERY
 
 
+def _load_supported_fields_list() -> List[str]:
+    supported_path = Path(__file__).resolve().parent / "schema" / "supported_fields.json"
+    try:
+        with supported_path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+    return data if isinstance(data, list) else []
+
+
+SUPPORTED_FIELDS: List[str] = _load_supported_fields_list()
+
+
 class ObservableType(Enum):
     IP = 'ip'
     URL = 'url'
@@ -573,6 +586,10 @@ class Events:
     required_presets = {}
     supported_fields = set()
     warned_fields = set()
+
+    @classmethod
+    def get_supported_fields(cls) -> List[str]:
+        return list(SUPPORTED_FIELDS)
 
     @classmethod
     def _load_required_presets(cls):

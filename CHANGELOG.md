@@ -4,6 +4,11 @@ All notable changes to the rosetta-ce project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.8.3] - 2025-01-27
+
+### Added
+- Exposed `SUPPORTED_FIELDS` and accessor helpers for downstream consumers
+
 ## [1.8.2] - 2025-01-27
 
 ### Added
