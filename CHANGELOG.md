@@ -2,6 +2,20 @@
 
 All notable changes to the rosetta-ce project will be documented in this file.
 
+## [Unreleased]
+
+## [1.8.2] - 2025-01-27
+
+### Added
+- Expanded cloud field coverage in `rosetta/schema/supported_fields.json`
+
+### Changed
+- `rosetta/schema/required_presets.json` now includes all supported fields for `syslog`, `cef`, `leef`, and `json`
+- Updated cloud infrastructure examples in `README.md`
+
+### Removed
+- Deleted unused schema files: `rosetta/schema/required.txt`, `rosetta/schema/observables.txt`, `rosetta/schema.json`
+
 ## [1.8.0] - 2026-01-25
 
 ### Added - Extended Observables Support 🚀
